@@ -1,0 +1,13 @@
+# Este site é 100% estático e roda no navegador: nenhum parecer ou relatório
+# gerado pela ferramenta deve ir para o repositório. As regras abaixo evitam
+# commitar por engano arquivos exportados caso alguém rode a ferramenta a
+# partir de uma cópia local desta pasta.
+Relatorio_Isencoes_IPTU.csv
+Parecer_IPTU_*.docx
+processos/
+*.processo.json
+
+# Arquivos comuns de SO/editor
+.DS_Store
+Thumbs.db
+*.swp
