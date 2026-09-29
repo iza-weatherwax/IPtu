@@ -279,8 +279,19 @@ const obs = id => R('Observação para o parecer', `<textarea data-k="obs_${id}"
 
 function build(){
   let h = '';
+  /* 0 – triagem (Decreto art. 4º, IV): sem hipótese, indeferimento automático */
+  h += `<section class="card"><h2>1. Triagem – enquadramento do contribuinte</h2>
+  <p class="base">O pedido só é analisado se o proprietário for aposentado ou pensionista, ou se o imóvel for moradia de pessoa com necessidades especiais permanentes (LC art. 113; Decreto art. 4º, IV). Pode haver mais de uma hipótese. Se nenhuma se aplica, o pedido é indeferido de imediato e o restante do formulário não precisa ser preenchido.</p>
+  ${C('c_apos','<b>Proprietário aposentado</b> (art. 8º – qualquer regime previdenciário oficial)')}
+  ${C('c_pens','<b>Proprietário pensionista</b> (art. 9º)')}
+  ${C('c_pne','<b>Morador com necessidades especiais permanentes</b> (art. 10)')}
+  ${C('c_nenhuma','<b>Nenhuma das hipóteses</b> (não é aposentado, pensionista nem há morador com necessidades especiais permanentes) – <b>indeferimento automático</b>')}
+  <div id="al_triagem"></div>
+  <div id="triObs" style="display:none">${R('Observação para o parecer', `<textarea data-k="obs_tri" placeholder="Opcional. Sai no parecer."></textarea>`)}</div>
+  </section>`;
+
   /* A – processo */
-  h += `<section class="card"><h2>1. Processo e requerente</h2>
+  h += `<section class="card"><h2>2. Processo e requerente</h2>
   <div class="cols">
     <div><label>Nº do processo</label>${I('numero')}</div>
     <div><label>Data do protocolo</label>${I('protocolo','date')}</div>
@@ -291,15 +302,16 @@ function build(){
     <div><label>Inscrição imobiliária</label>${I('inscricao')}</div>
     <div><label>CCI (cadastro do imóvel no sistema)</label>${I('cci')}</div>
     <div><label>Endereço do imóvel</label>${I('endereco')}</div>
-    <div><label>Condição do requerente em relação ao imóvel</label>${S('condicao',[['','Não informado'],['prop','Proprietário'],['poss','Possuidor / posseiro'],['cess','Cessionário / promitente comprador'],['outra','Outra']])}</div>
-    <div><label>Salário-mínimo vigente (R$)</label>${I('sm','number','step="0.01" min="0" placeholder="informe o valor"')}</div>
+    <div class="soAnalise"><label>Condição do requerente em relação ao imóvel</label>${S('condicao',[['','Não informado'],['prop','Proprietário'],['poss','Possuidor / posseiro'],['cess','Cessionário / promitente comprador'],['outra','Outra']])}</div>
+    <div class="soAnalise"><label>Salário-mínimo vigente (R$)</label>${I('sm','number','step="0.01" min="0" placeholder="informe o valor"')}</div>
     <div><label>Fiscal (nome)</label>${I('fiscal')}</div>
     <div><label>Matrícula</label>${I('matricula')}</div>
   </div>
   <div id="al_proc"></div></section>`;
 
+  h += `<div id="restoForm">`;
   /* B – documentos */
-  h += `<section class="card"><h2>2. Documentos básicos (Decreto art. 20)</h2>
+  h += `<section class="card"><h2>3. Documentos básicos (Decreto art. 20)</h2>
   <p class="base">Marque o que o contribuinte apresentou. A ausência gera apenas pendência no parecer.</p>`;
   BASICOS.forEach(([k,l,c]) => h += R(`${l} <small>(${c})</small>`, S(k, DOCST)));
   h += R('Documento que demonstre a relação jurídica com o imóvel <small>(art. 20, I, “f”)</small>', `<div style="display:grid;gap:4px">${S('b_rel',DOCST)}${S('b_rel_t',listOpts(REL_JUR,'Qual documento?'))}</div>`);
@@ -308,7 +320,7 @@ function build(){
   h += `</section>`;
 
   /* C – requisitos */
-  h += `<section class="card"><h2>3. Requisitos cumulativos (Decreto art. 4º)</h2>
+  h += `<section class="card"><h2>4. Requisitos cumulativos (Decreto art. 4º)</h2>
   <p class="base">A falta de qualquer requisito impede o reconhecimento (art. 4º, §1º). Cada requisito mostra a sugestão do assistente com base no que você marcar; o campo “Automático” pode ser substituído por sua decisão.</p>`;
 
   /* r1 */
@@ -335,15 +347,11 @@ function build(){
 
   /* r4 */
   h += `<div class="req">${reqHead(REQ[3])}
-  <p class="base">Uma das hipóteses abaixo é obrigatória (pode haver mais de uma). Se nenhuma se aplica, marque “Nenhuma”: o requisito não é atendido e o pedido é indeferido (Decreto art. 4º, IV e §1º).</p>
-  ${C('c_nenhuma','<b>Nenhuma das hipóteses</b> (não é aposentado, pensionista nem há morador com necessidades especiais permanentes)')}
-  ${C('c_apos','<b>Proprietário aposentado</b> (art. 8º – qualquer regime previdenciário oficial)')}
-  <div class="sub" id="boxApos" style="display:none">${R('Documento apresentado (um deles – art. 21, I, “a”)', S('ap_doc',listOpts(DOC_APOS,'Nenhum / não apresentado')))}</div>
-  ${C('c_pens','<b>Proprietário pensionista</b> (art. 9º)')}
-  <div class="sub" id="boxPens" style="display:none">${R('Documento apresentado (um deles – art. 21, II, “a”)', S('pe_doc',listOpts(DOC_PENS,'Nenhum / não apresentado')))}
+  <p class="base">Hipótese(s) indicada(s) na triagem (item 1): <b id="r4Hip">–</b>. Confira abaixo a documentação de cada uma.</p>
+  <div class="sub" id="boxApos" style="display:none"><b>Proprietário aposentado</b>${R('Documento apresentado (um deles – art. 21, I, “a”)', S('ap_doc',listOpts(DOC_APOS,'Nenhum / não apresentado')))}</div>
+  <div class="sub" id="boxPens" style="display:none"><b>Proprietário pensionista</b>${R('Documento apresentado (um deles – art. 21, II, “a”)', S('pe_doc',listOpts(DOC_PENS,'Nenhum / não apresentado')))}
   ${C('pe_obito','Complementar: certidão de óbito')}${C('pe_origem','Complementar: documento de origem da pensão')}</div>
-  ${C('c_pne','<b>Morador com necessidades especiais permanentes</b> (art. 10)')}
-  <div class="sub" id="boxPne"><b>Obrigatórios (art. 21, III, “a”)</b>
+  <div class="sub" id="boxPne"><b>Morador com necessidades especiais permanentes – obrigatórios (art. 21, III, “a”)</b>
   ${R('Laudo médico, relatório multiprofissional ou documento técnico equivalente', S('pn_laudo',listOpts(DOC_PNE_LAUDO,'Não apresentado')))}
   ${R('Documento de identificação da pessoa com necessidades especiais', S('pn_id',DOCST))}
   ${R('Comprovação de residência efetiva no imóvel (habitual, contínua e efetiva – art. 11)', S('pn_res',DOCST))}
@@ -374,7 +382,7 @@ function build(){
   h += `</section>`;
 
   /* D – efeitos */
-  h += `<section class="card"><h2>4. Efeitos no tempo</h2>
+  h += `<section class="card"><h2>5. Efeitos no tempo</h2>
   <div id="box2026">
   <p class="base">Decreto art. 34 (pedidos do exercício de 2026)</p>
   ${R('Todos os requisitos já estavam preenchidos em 01/01/2026 (fato gerador)?', S('t_ini',[['','Não analisado'],['sim','Sim'],['nao','Não – surgiram depois (art. 34, §4º)']]))}
@@ -384,6 +392,7 @@ function build(){
   <div id="boxOutros" class="alert" style="display:none">Para exercício diferente de 2026, o Decreto (art. 35) remete o prazo de requerimento e renovação ao calendário tributário anual ou ato próprio da Secretaria. Defina o exercício inicial abaixo.</div>
   ${R('Exercício inicial de eficácia (deixe em branco para usar o sugerido)', I('exi','number','step="1"'))}
   <div id="exiSug" class="base"></div></section>`;
+  h += `</div>`;
 
   $('form').innerHTML = h;
 }
@@ -493,8 +502,13 @@ function pendReq(id){
 }
 
 /* ============ pendências, impeditivos e avisos ============ */
+const triagemIndef = () => !!s.c_nenhuma;
+const triagemOk = () => !!(s.c_apos || s.c_pens || s.c_pne);
+const TRI_MOTIVO = 'IV – Não é proprietário aposentado nem pensionista e o imóvel não é moradia de pessoa com necessidades especiais permanentes (triagem – indeferimento automático)';
 function coletar(){
   const nao = [], pend = [], aviso = [];
+  if (triagemIndef()){ nao.push(TRI_MOTIVO + (s.obs_tri ? ': ' + s.obs_tri : '')); return {nao, pend, aviso}; }
+  if (!triagemOk()){ aviso.push('Triagem (item 1) não feita: indique se o contribuinte é aposentado, pensionista ou se há morador com necessidades especiais permanentes.'); return {nao, pend, aviso}; }
   BASICOS.forEach(([k,l,c]) => { if (s[k]==='falta') pend.push(`${l} (${c})`); else if (!s[k]) aviso.push(`Não conferido: ${l}`); });
   if (s.b_rel==='falta') pend.push('Documento que demonstre a relação jurídica com o imóvel (art. 20, I, “f”)'); else if (!s.b_rel) aviso.push('Não conferido: relação jurídica com o imóvel');
   CONDIC.forEach(([k,l,c]) => { if (s[k]==='falta') pend.push(`${l} (${c})`); });
@@ -517,7 +531,7 @@ function coletar(){
 function autoDecisao(c){
   if (c.nao.length) return 'indef';
   if (c.pend.length) return 'pend';
-  if (c.aviso.some(a => a.startsWith('Não conferido') || a.startsWith('Requisito') || a.startsWith('Art. 34: não'))) return 'incompleta';
+  if (c.aviso.some(a => a.startsWith('Triagem') || a.startsWith('Não conferido') || a.startsWith('Requisito') || a.startsWith('Art. 34: não'))) return 'incompleta';
   return 'def';
 }
 const DEC_L = {def:'Deferimento', indef:'Indeferimento', pend:'Notificar para sanar pendência (10 dias úteis)', incompleta:'Análise incompleta'};
@@ -530,6 +544,13 @@ const show = (id, on) => { const e = $(id); if (e) e.style.display = on ? '' : '
 
 function recalc(){
   REQ.forEach(r => { $('bd_'+r.id).innerHTML = badge(r.id); });
+  const ind = triagemIndef(), tri = triagemOk();
+  show('restoForm', tri && !ind); show('triObs', ind);
+  document.querySelectorAll('.soAnalise').forEach(e => { e.style.display = ind ? 'none' : ''; });
+  const dsel = document.querySelector('[data-k="decisao"]'); dsel.disabled = ind; dsel.value = ind ? 'indef' : (s.decisao || '');
+  $('r4Hip').textContent = [s.c_apos && 'proprietário aposentado', s.c_pens && 'proprietário pensionista', s.c_pne && 'morador com necessidades especiais permanentes'].filter(x => x).join('; ') || '–';
+  $('al_triagem').innerHTML = ind ? `<div class="alert red"><b>Indeferimento automático.</b> Sem nenhuma das hipóteses do art. 113, o requisito do inciso IV não é atendido, e a ausência de qualquer requisito impede o reconhecimento da isenção (Decreto art. 4º, IV e §1º). Basta preencher a identificação do processo (item 2) e gerar o parecer.</div>`
+    : tri ? '' : `<div class="alert">Indique a hipótese de enquadramento para liberar o restante da análise.</div>`;
   show('meiBox', s.r1_ativ==='mei'); show('boxApos', s.c_apos); show('boxPens', s.c_pens); show('boxPne', s.c_pne);
   show('r5Info', s.r5_cons==='outro');
   const is26 = num(s.exercicio) === 2026; show('box2026', is26); show('boxOutros', !is26);
@@ -540,7 +561,6 @@ function recalc(){
   if (s.hab==='nao') al.r3 += `<div class="alert red">Construção sem condições de uso é considerada não edificada (LC art. 96, par. único; Decreto art. 7º, §2º).</div>`;
   if (s.r3_peq) al.r3 += `<div class="alert">Art. 7º, §3º: pequena construção/abrigo/depósito/edícula sem uso residencial efetivo não caracteriza, por si só, imóvel edificado de uso residencial unifamiliar.</div>`;
   if (s.r1_ativ==='mei') al.r1 = `<div class="alert">Art. 14: a atividade de MEI só é admitida se todos os requisitos do art. 113 estiverem atendidos, inclusive a renda familiar.</div>`;
-  if (s.c_nenhuma) al.r4 = `<div class="alert red">Nenhuma das hipóteses do inciso IV: requisito não atendido. A ausência de qualquer requisito impede o reconhecimento da isenção (Decreto art. 4º, §1º) – indeferimento.</div>`;
   if (s.c_pne && s.pn_perm==='temp') al.r4 = `<div class="alert red">Doença temporária, convalescença ou limitação passageira não se enquadram (art. 10, §5º).</div>`;
   if (s.condicao && s.condicao!=='prop') al.proc = `<div class="alert">Requerente não é proprietário. O art. 113 da LC 203/2022 fala em imóvel “de um mesmo proprietário”; o Decreto (art. 20, I, “f”) aceita termo de posse e cessão como prova da relação com o imóvel. Decisão do fiscal.</div>`;
   const rd = renda();
@@ -561,12 +581,37 @@ function recalc(){
   const c = coletar(); const a = autoDecisao(c);
   $('sugestao').textContent = DEC_L[a];
   $('sugestao').style.color = {def:'var(--ok)', indef:'var(--nao)', pend:'var(--pend)', incompleta:'var(--na)'}[a];
-  $('sugestaoNota').textContent = {def:'Todos os requisitos marcados como atendidos e sem pendências.', indef:'Há requisito não atendido.', pend:'Nenhum impeditivo, mas há documentos ou informações pendentes.', incompleta:'Há itens ainda não conferidos ou analisados.'}[a];
+  $('sugestaoNota').textContent = ind ? 'Triagem: contribuinte fora das hipóteses do art. 113 – indeferimento automático.' : {def:'Todos os requisitos marcados como atendidos e sem pendências.', indef:'Há requisito não atendido.', pend:'Nenhum impeditivo, mas há documentos ou informações pendentes.', incompleta:'Há itens ainda não conferidos ou analisados.'}[a];
   $('lstNao').innerHTML = li(c.nao); $('lstPend').innerHTML = li(c.pend); $('lstAviso').innerHTML = li(c.aviso);
 }
 
 /* ============ parecer ============ */
+function gerarParecerTriagem(){
+  let n = 0;
+  const HD = t => `<p class="h">${t}</p>`;
+  const N = t => `<p class="n">${++n}. ${t}</p>`;
+  const renov = s.tipo === 'renov';
+  let h = '';
+  h += HD(`Isenção de IPTU.${renov ? ' Renovação.' : ''} Art. 113 da LC nº 203/2022. Decreto Municipal nº 1.410/2026. Não enquadramento.`);
+  h += HD('DO OBJETO');
+  h += N(`Cuida-se de requerimento${s.protocolo ? ' protocolado em ' + dbr(s.protocolo) : ''}, formulado por ${ph(s.requerente)} (CPF ${ph(s.cpf)}), com o propósito de ${renov ? 'renovação da isenção' : 'reconhecimento da isenção'} do Imposto sobre a Propriedade Predial e Territorial Urbana (IPTU) relativa ao imóvel de inscrição imobiliária nº ${ph(s.inscricao)}, situado em ${ph(s.endereco)}, nos termos do artigo 113 da Lei Complementar nº 203/2022, regulamentado pelo Decreto Municipal nº 1.410/2026, para o exercício de ${ph(s.exercicio)}.`);
+  h += HD('DOS FATOS');
+  h += N(`Da análise preliminar do pedido, verificou-se que o proprietário não é aposentado nem pensionista e que o imóvel não tem como morador pessoa com necessidades especiais permanentes${s.obs_tri ? '. ' + esc(s.obs_tri) : ''}.`);
+  h += HD('DA FUNDAMENTAÇÃO JURÍDICA');
+  h += N('O artigo 113 da Lei Complementar nº 203/2022 isenta do IPTU os imóveis utilizados unicamente para fins residenciais, considerados de uso unifamiliar, edificados, de um mesmo proprietário que seja aposentado ou pensionista ou que tenham como morador portador de necessidades especiais permanentes, que não possua outra propriedade e que não tenham renda familiar somada maior que 1,5 (um inteiro e meio) salários-mínimos.');
+  h += N('O Decreto Municipal nº 1.410/2026, em seu artigo 4º, inciso IV, exige que o proprietário seja aposentado ou pensionista, ou que o imóvel tenha como morador pessoa com necessidades especiais permanentes, e estabelece que os requisitos são cumulativos, de modo que a ausência de qualquer deles impede o reconhecimento da isenção (§ 1º). Ausente essa condição, torna-se desnecessário o exame dos demais requisitos.');
+  h += HD('DA CONCLUSÃO');
+  h += N('Ante o exposto, manifesta-se desfavoravelmente ao reconhecimento da isenção do IPTU prevista no artigo 113 da Lei Complementar nº 203/2022, por não atendido o requisito do inciso IV do art. 4º do Decreto Municipal nº 1.410/2026 (proprietário aposentado ou pensionista, ou morador com necessidades especiais permanentes).');
+  h += N('O indeferimento deve ser motivado e comunicado ao interessado (Decreto, art. 38).');
+  h += HD('DO ENCAMINHAMENTO');
+  h += N('Encaminhe-se o presente parecer à autoridade administrativa competente para despacho, nos termos do artigo 2º, § 2º, do Decreto Municipal nº 1.410/2026 e do artigo 446 da Lei Complementar nº 203/2022.');
+  h += `<p class="c">Araguari/MG, ${new Date().toLocaleDateString('pt-BR')}.</p><p class="c">${ph(s.fiscal)}</p><p class="c">Matrícula: ${ph(s.matricula)}</p>`;
+  $('parecer').innerHTML = h;
+  $('parecer').scrollIntoView({behavior:'smooth', block:'start'});
+  registrarProcesso('indef');
+}
 function gerarParecer(){
+  if (triagemIndef()) return gerarParecerTriagem();
   const c = coletar(); const dec = s.decisao || autoDecisao(c); const rd = renda(); const exi = exiFinal();
   const ex = num(s.exercicio); const renov = s.tipo === 'renov';
   const stD = v => v==='ok' ? 'apresentado' : v==='falta' ? 'ausente ou insuficiente' : 'não conferido';

@@ -4,6 +4,15 @@ Ferramenta de apoio para análise de pedidos de isenção de IPTU de pessoa
 física (art. 113 da LC 203/2022, regulamentado pelo Decreto nº 1.410/2026).
 Não decide, não bloqueia e não substitui a análise do fiscal.
 
+## Triagem inicial
+
+O primeiro item do formulário é a triagem: o pedido só é analisado se o
+proprietário for aposentado ou pensionista, ou se o imóvel for moradia de
+pessoa com necessidades especiais permanentes (Decreto art. 4º, IV). Se
+nenhuma dessas hipóteses se aplica, o assistente indica indeferimento
+automático, esconde o restante do formulário e gera um parecer simplificado —
+basta preencher a identificação do processo.
+
 ## Como funciona
 
 O programa é um único arquivo estático (`index.html`), com HTML, CSS e
