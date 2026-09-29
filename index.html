@@ -623,7 +623,7 @@ function gerarParecerTriagem(){
   h += N('O Decreto Municipal nº 1.410/2026, em seu artigo 4º, inciso IV, exige que o proprietário seja aposentado ou pensionista, ou que o imóvel tenha como morador pessoa com necessidades especiais permanentes, e estabelece que os requisitos são cumulativos, de modo que a ausência de qualquer deles impede o reconhecimento da isenção (§ 1º). Ausente essa condição, torna-se desnecessário o exame dos demais requisitos.');
   h += HD('DA CONCLUSÃO');
   h += N('Ante o exposto, manifesta-se desfavoravelmente ao reconhecimento da isenção do IPTU prevista no artigo 113 da Lei Complementar nº 203/2022, por não atendido o requisito do inciso IV do art. 4º do Decreto Municipal nº 1.410/2026 (proprietário aposentado ou pensionista, ou morador com necessidades especiais permanentes).');
-  h += `<p class="n">É o parecer, salvo melhor juízo, que se submete à apreciação da autoridade administrativa competente para decisão (LC nº 203/2022, art. 446; Decreto, art. 2º, § 2º).</p>`;
+  h += N('Fica ressalvado ao requerente o direito de impugnação ou recurso, nos termos da Lei Complementar nº 203, de 2022.');
   h += `<p class="c">Araguari/MG, ${new Date().toLocaleDateString('pt-BR')}.</p><p class="c">${ph(s.fiscal)}</p><p class="c">Matrícula: ${ph(s.matricula)}</p>`;
   $('parecer').innerHTML = h;
   $('parecer').scrollIntoView({behavior:'smooth', block:'start'});
@@ -742,8 +742,8 @@ function gerarParecer(){
   if (dec === 'pend'){
     h += HD('DO ENCAMINHAMENTO');
     h += N(`Oficie-se, com cópia das peças necessárias, para ${ph((s.destino || '').trim())}, solicitando a verificação dos pontos acima, com retorno dos autos a este Departamento de Fiscalização após a manifestação.`);
-  } else if (dec === 'def' || dec === 'indef'){
-    h += `<p class="n">É o parecer, salvo melhor juízo, que se submete à apreciação da autoridade administrativa competente para decisão (LC nº 203/2022, art. 446; Decreto, art. 2º, § 2º).</p>`;
+  } else if (dec === 'indef'){
+    h += N('Fica ressalvado ao requerente o direito de impugnação ou recurso, nos termos da Lei Complementar nº 203, de 2022.');
   }
   h += `<p class="c">Araguari/MG, ${new Date().toLocaleDateString('pt-BR')}.</p><p class="c">${ph(s.fiscal)}</p><p class="c">Matrícula: ${ph(s.matricula)}</p>`;
   $('parecer').innerHTML = h;
