@@ -120,8 +120,22 @@ aside ul{margin:4px 0 0;padding-left:18px;font-size:12.5px}
       <option value="">Automática (conforme sugestão)</option>
       <option value="def">Deferimento</option>
       <option value="indef">Indeferimento</option>
-      <option value="pend">Notificação para sanar pendência</option>
+      <option value="pend">Encaminhar para verificação (pendência)</option>
     </select>
+    <div id="destBox" class="sub" style="display:none">
+      <label style="font-size:12px;color:var(--mut)">Encaminhar, por ofício, para (órgão / departamento / ente)</label>
+      <input data-k="destino" list="destLista" placeholder="Ex.: Secretaria Municipal de Saúde">
+      <datalist id="destLista">
+        <option value="Secretaria Municipal de Saúde"></option>
+        <option value="Cartório de Registro de Imóveis"></option>
+        <option value="Secretaria Municipal de Desenvolvimento Social / CRAS"></option>
+        <option value="Instituto Nacional do Seguro Social (INSS)"></option>
+        <option value="Setor de Cadastro Imobiliário"></option>
+      </datalist>
+      <label style="font-size:12px;color:var(--mut);margin-top:6px;display:block">O que deve ser verificado (opcional – complementa as pendências listadas)</label>
+      <textarea data-k="destino_obj" placeholder="Ex.: manifestação técnica sobre o caráter permanente da condição"></textarea>
+      <div id="destAviso"></div>
+    </div>
     <div class="bar">
       <button id="btnGerar">Gerar parecer</button>
       <button class="sec" id="btnSalvar" title="Ctrl+S">Salvar processo</button>
@@ -431,8 +445,11 @@ function renda(){
     porM[r.m] = true;
   });
   const semLinha = s.moradores.map((m,i) => [m,i]).filter(([m,i]) => m.nucleo && !porM[i]).map(([m,i]) => m.nome || `Morador ${i+1}`);
-  const semDoc = s.rend.filter(r => !r.doc).map(r => `${s.moradores[+r.m]?.nome || 'Morador '+(+r.m+1)} – ${TIPOS[r.tipo]?.l || ''}`);
-  return {sm, lim, total, excl, hasData:s.rend.length>0, semLinha, semDoc};
+  const rotulo = r => `${s.moradores[+r.m]?.nome || 'Morador '+(+r.m+1)} – ${TIPOS[r.tipo]?.l || ''}`;
+  const semDoc = s.rend.filter(r => !r.doc).map(rotulo);
+  const semValor = s.rend.filter(r => s.moradores[+r.m]?.nucleo && r.tipo !== 'semrenda' && String(r.valor ?? '').trim() === '').map(rotulo);
+  const incompleta = semLinha.length > 0 || semDoc.length > 0 || semValor.length > 0;
+  return {sm, lim, total, excl, hasData:s.rend.length>0, semLinha, semDoc, semValor, incompleta};
 }
 function exiSug(){
   const ex = parseInt(s.exercicio,10);
@@ -445,7 +462,7 @@ const exiFinal = () => parseInt(s.exi,10) || exiSug();
 /* ============ sugestões por requisito ============ */
 const SUG = {
   r1(){ const a = s.r1_ativ; if(!a) return null; if(a==='nao') return 'ok'; if(a==='outra') return 'nao';
-    const it = MEI_ITENS.map(([k]) => s[k]||''); const rd = SUG.r6();
+    const it = MEI_ITENS.map(([k]) => s[k]||''); const rd = eff('r6');
     if (it.includes('nao') || rd==='nao') return 'nao';
     if (it.every(x => x==='ok') && rd==='ok') return 'ok'; return 'pend'; },
   r2(){ if (ART6.some(([k]) => s[k])) return 'nao'; if (s.r2_conf==='sim') return 'ok'; return null; },
@@ -461,7 +478,7 @@ const SUG = {
     if (!v.length) return null; if (v.includes('ok')) return 'ok'; if (v.every(x => x==='nao')) return 'nao'; return 'pend'; },
   r5(){ if (s.r5_cons==='outro') return 'nao'; if (!s.r5_cons && !s.r5_decl) return null;
     if (s.r5_cons==='nenhum' && s.r5_decl==='ok') return 'ok'; return 'pend'; },
-  r6(){ const r = renda(); if (!r.hasData) return null; if (!(r.lim > 0)) return 'pend'; return r.total <= r.lim ? 'ok' : 'nao'; }
+  r6(){ const r = renda(); if (!r.hasData) return null; if (!(r.lim > 0)) return 'pend'; if (r.total > r.lim) return 'nao'; return r.incompleta ? 'pend' : 'ok'; }
 };
 const eff = id => s['st_'+id] || SUG[id]() || 'na';
 
@@ -496,6 +513,7 @@ function pendReq(id){
     if (!r.hasData) p.push('Rendimentos não lançados');
     if (!(r.lim > 0)) p.push('Salário-mínimo vigente não informado');
     r.semLinha.forEach(n => p.push(`Integrante do núcleo sem rendimento ou declaração de ausência de renda: ${n}`));
+    r.semValor.forEach(n => p.push(`Valor do rendimento não informado: ${n}`));
     r.semDoc.forEach(n => p.push(`Sem documento comprobatório de renda: ${n} (art. 21, IV)`));
   }
   return p;
@@ -534,7 +552,7 @@ function autoDecisao(c){
   if (c.aviso.some(a => a.startsWith('Triagem') || a.startsWith('Não conferido') || a.startsWith('Requisito') || a.startsWith('Art. 34: não'))) return 'incompleta';
   return 'def';
 }
-const DEC_L = {def:'Deferimento', indef:'Indeferimento', pend:'Notificar para sanar pendência (10 dias úteis)', incompleta:'Análise incompleta'};
+const DEC_L = {def:'Deferimento', indef:'Indeferimento', pend:'Encaminhar para verificação (pendência)', incompleta:'Análise incompleta'};
 
 /* ============ atualização da tela ============ */
 function badge(id){ const e = eff(id); const sug = SUG[id]();
@@ -581,7 +599,10 @@ function recalc(){
   const c = coletar(); const a = autoDecisao(c);
   $('sugestao').textContent = DEC_L[a];
   $('sugestao').style.color = {def:'var(--ok)', indef:'var(--nao)', pend:'var(--pend)', incompleta:'var(--na)'}[a];
-  $('sugestaoNota').textContent = ind ? 'Triagem: contribuinte fora das hipóteses do art. 113 – indeferimento automático.' : {def:'Todos os requisitos marcados como atendidos e sem pendências.', indef:'Há requisito não atendido.', pend:'Nenhum impeditivo, mas há documentos ou informações pendentes.', incompleta:'Há itens ainda não conferidos ou analisados.'}[a];
+  $('sugestaoNota').textContent = ind ? 'Triagem: contribuinte fora das hipóteses do art. 113 – indeferimento automático.' : {def:'Todos os requisitos marcados como atendidos e sem pendências.', indef:'Há requisito não atendido.', pend:'Nenhum impeditivo, mas há documentos ou informações pendentes: o processo não volta ao contribuinte, é encaminhado por ofício ao órgão indicado para verificação.', incompleta:'Há itens ainda não conferidos ou analisados.'}[a];
+  const decEf = ind ? 'indef' : (s.decisao || a);
+  show('destBox', decEf === 'pend');
+  $('destAviso').innerHTML = decEf === 'pend' && !(s.destino || '').trim() ? `<div class="alert">Informe para onde o processo será encaminhado.</div>` : '';
   $('lstNao').innerHTML = li(c.nao); $('lstPend').innerHTML = li(c.pend); $('lstAviso').innerHTML = li(c.aviso);
 }
 
@@ -623,7 +644,7 @@ function gerarParecer(){
   const lc = t => /^[A-ZÁÉÍÓÚÂÊÔÃÕÇ]{2}/.test(t) ? t : t.charAt(0).toLowerCase() + t.slice(1);
   const det = {
     r1: () => { let x = {nao:'não há atividade econômica no imóvel', mei:'há atividade de microempreendedor individual do proprietário (LC art. 113, §1º; Decreto art. 14)', outra:'foi constatada atividade econômica ou uso incompatível com fins unicamente residenciais (Decreto art. 5º)'}[s.r1_ativ] || '';
-      if (s.r1_ativ==='mei') x += '; ' + MEI_ITENS.map(([k,l]) => `${lc(l.replace(/\s*\(.*\)$/,''))}: ${LBL[s[k]||'na'].toLowerCase()}`).join('; ') + `; renda familiar dentro do limite: ${SUG.r6()==='ok'?'sim':SUG.r6()==='nao'?'não':'não apurado'}`;
+      if (s.r1_ativ==='mei') x += '; ' + MEI_ITENS.map(([k,l]) => `${lc(l.replace(/\s*\(.*\)$/,''))}: ${LBL[s[k]||'na'].toLowerCase()}`).join('; ') + `; renda familiar dentro do limite: ${eff('r6')==='ok'?'sim':eff('r6')==='nao'?'não':'não apurado'}`;
       return x; },
     r2: () => { const t = ART6.filter(([k]) => s[k]).map(([k,l]) => lc(l.replace(/\s*\(.*\)$/,''))); return t.length ? 'constatou-se que o imóvel está ' + t.join('; ') + ' (Decreto art. 6º, parágrafo único)' : (s.r2_conf==='sim' ? 'o uso unifamiliar foi confirmado' : ''); },
     r3: () => { const ce = {sim:'acima de 0,15', nao:'abaixo de 0,15'}[s.ce] || ''; return (ce || s.hab) ? `Coeficiente de Edificação (CE) ${ce || '<mark>[PREENCHER]</mark>'} (LC art. 95, §2º)${s.hab==='sim' ? ', construção em condições de uso' : s.hab==='nao' ? ', construção sem condições de uso (LC art. 96, parágrafo único)' : ''}${s.r3_peq ? '; há indício de construção sem uso residencial efetivo (Decreto art. 7º, §3º)' : ''}` : ''; },
@@ -636,7 +657,7 @@ function gerarParecer(){
   let h = '';
 
   /* ementa */
-  h += HD(`Isenção de IPTU.${renov ? ' Renovação.' : ''} Art. 113 da LC nº 203/2022. Decreto Municipal nº 1.410/2026.`);
+  h += HD(`Isenção de IPTU.${renov ? ' Renovação.' : ''} Art. 113 da LC nº 203/2022. Decreto Municipal nº 1.410/2026.${dec === 'pend' ? ' Encaminhamento para verificação.' : ''}`);
 
   /* objeto */
   h += HD('DO OBJETO');
@@ -651,15 +672,31 @@ function gerarParecer(){
   h += N(`Quanto ao imóvel: ${imv.length ? imv.map((x,i) => (i ? lc(x) : x)).join('; ') + '.' : semInfo('uso, ocupação e edificação não informados.')}`);
   h += N(`Quanto à condição prevista no inciso IV do art. 4º do Decreto: ${det.r4() ? det.r4() + '.' : semInfo('hipótese não indicada.')}`);
   h += N(`Quanto à inexistência de outra propriedade, domínio útil ou posse tributável pelo IPTU (Decreto, art. 4º, V e art. 12): ${det.r5() ? det.r5() + '.' : semInfo('não informado.')}`);
+  /* renda: o texto acompanha a situação efetiva do requisito VI (inclusive a escolha do fiscal) e os campos em branco */
+  const e6 = eff('r6'), o6 = s.obs_r6 ? esc(s.obs_r6) : '';
+  const lacunas = [...rd.semLinha.map(x => `sem rendimento nem declaração de ausência de renda: ${esc(x)}`), ...rd.semValor.map(x => `valor não informado: ${esc(x)}`), ...rd.semDoc.map(x => `sem documento comprobatório: ${esc(x)}`)];
+  const concl6 = () => {
+    if (e6 === 'ok') return ` Conclui-se que a renda familiar não supera o limite legal, restando atendido o requisito do inciso VI do art. 4º do Decreto${o6 ? ' (' + o6 + ')' : ''}.`;
+    if (e6 === 'nao'){
+      const acima = rd.lim && rd.hasData && rd.total > rd.lim && !s.st_r6;
+      return acima ? ` Conclui-se que a renda familiar supera o limite legal, <b>não</b> restando atendido o requisito do inciso VI do art. 4º do Decreto${o6 ? ' (' + o6 + ')' : ''}.`
+        : ` ${rd.hasData ? 'Não obstante os valores lançados, conclui-se' : 'Conclui-se'} que <b>não</b> restou atendido o requisito do inciso VI do art. 4º do Decreto (renda familiar não superior a 1,5 salário-mínimo)${o6 ? ', pelos seguintes motivos: ' + o6 : ', pelos seguintes motivos: <mark>[PREENCHER]</mark>'}.`;
+    }
+    if (e6 === 'pend') return ` A renda familiar não pôde ser apurada de forma conclusiva, permanecendo pendente de verificação o requisito do inciso VI do art. 4º do Decreto${o6 ? ' (' + o6 + ')' : ''}.`;
+    return ' ' + semInfo('requisito de renda familiar ainda não analisado.');
+  };
   if (!s.rend.length){
-    h += N(`Quanto à renda familiar (Decreto, art. 13): ${semInfo('nenhum rendimento lançado.')}`);
+    h += N(`Quanto à renda familiar (Decreto, art. 13): não foram lançados rendimentos dos integrantes do núcleo familiar.${concl6()}`);
   } else {
     h += N(`Quanto à renda familiar, apurou-se o quadro abaixo, elaborado nos termos do artigo 13 do Decreto, que considera os rendimentos brutos habituais das pessoas que residem no imóvel e integram o núcleo familiar:`);
+    const vazio = '<b>Não informado</b>';
     h += `<table><tr><th data-w="1650">Morador</th><th data-w="850" data-a="center">Núcleo familiar</th><th data-w="2500">Rendimento</th><th data-w="1250" data-a="right">Valor bruto (R$)</th><th data-w="900" data-a="center">Computa?</th><th data-w="1921">Documento</th></tr>` +
-      s.rend.map(r => { const m = s.moradores[+r.m] || {}; const t = TIPOS[r.tipo];
-        return `<tr><td>${esc(m.nome || 'Morador ' + (+r.m+1))}${m.parentesco ? ' (' + esc(m.parentesco) + ')' : ''}</td><td data-a="center">${m.nucleo ? 'Sim' : 'Não'}</td><td>${esc(t.l)}</td><td data-a="right">${(num(r.valor)||0).toLocaleString('pt-BR',{minimumFractionDigits:2})}</td><td data-a="center">${m.nucleo ? (t.comp ? 'Sim' : 'Não') : 'Não'}</td><td>${r.doc ? esc(r.doc) : '<b>Não apresentado</b>'}</td></tr>`; }).join('') +
+      s.rend.map(r => { const m = s.moradores[+r.m] || {}; const t = TIPOS[r.tipo]; const semV = String(r.valor ?? '').trim() === '' && r.tipo !== 'semrenda';
+        return `<tr><td>${esc(m.nome || 'Morador ' + (+r.m+1))}${m.parentesco ? ' (' + esc(m.parentesco) + ')' : ''}</td><td data-a="center">${m.nucleo ? 'Sim' : 'Não'}</td><td>${esc(t.l)}</td><td data-a="right">${semV ? vazio : (num(r.valor)||0).toLocaleString('pt-BR',{minimumFractionDigits:2})}</td><td data-a="center">${m.nucleo ? (t.comp ? 'Sim' : 'Não') : 'Não'}</td><td>${r.doc ? esc(r.doc) : '<b>Não apresentado</b>'}</td></tr>`; }).join('') +
+      s.moradores.map((m,i) => [m,i]).filter(([m,i]) => m.nucleo && !s.rend.some(r => +r.m === i)).map(([m,i]) =>
+        `<tr><td>${esc(m.nome || 'Morador ' + (i+1))}${m.parentesco ? ' (' + esc(m.parentesco) + ')' : ''}</td><td data-a="center">Sim</td><td>${vazio}</td><td data-a="right">${vazio}</td><td data-a="center">–</td><td>${vazio}</td></tr>`).join('') +
       `<tr><th colspan="3" data-w="4999" data-a="center">Total computado</th><th data-a="right" data-w="1250">${rd.total.toLocaleString('pt-BR',{minimumFractionDigits:2})}</th><th data-w="900"></th><th data-w="1921"></th></tr></table>`;
-    h += N(`A renda familiar somada computada é de <b>${brl(rd.total)}</b>, ${rd.lim ? `frente ao limite de <b>${brl(rd.lim)}</b> (1,5 salário-mínimo, de ${brl(rd.sm)}), ${rd.total <= rd.lim ? 'não superado' : 'superado em ' + brl(rd.total - rd.lim)}` : 'sem informação do salário-mínimo vigente para confronto com o limite de 1,5 salário-mínimo <mark>[PREENCHER]</mark>'}.${rd.excl ? ' Não foram computados ' + brl(rd.excl) + ' em valores excluídos pelo art. 13, §2º, do Decreto.' : ''}`);
+    h += N(`A renda familiar somada computada${rd.incompleta ? ', considerados apenas os valores informados,' : ''} é de <b>${brl(rd.total)}</b>, ${rd.lim ? `frente ao limite de <b>${brl(rd.lim)}</b> (1,5 salário-mínimo, de ${brl(rd.sm)}), ${rd.total <= rd.lim ? 'não superado' : 'superado em ' + brl(rd.total - rd.lim)}` : 'sem informação do salário-mínimo vigente para confronto com o limite de 1,5 salário-mínimo <mark>[PREENCHER]</mark>'}.${rd.excl ? ' Não foram computados ' + brl(rd.excl) + ' em valores excluídos pelo art. 13, §2º, do Decreto.' : ''}${lacunas.length ? ' Ressalva-se que a apuração está incompleta (' + lacunas.join('; ') + ').' : ''}${concl6()}`);
   }
   if (ex === 2026){
     const t = {sim:'Os requisitos legais estavam preenchidos em 1º de janeiro de 2026, data do fato gerador (Decreto, art. 34, §1º).', nao:'Os requisitos legais surgiram somente após 1º de janeiro de 2026 (Decreto, art. 34, §4º).'}[s.t_ini] || semInfo('não foi informado se os requisitos já estavam preenchidos em 1º de janeiro de 2026.');
@@ -683,7 +720,7 @@ function gerarParecer(){
   todos.forEach((t,i) => h += BL(t + (i === todos.length - 1 ? '.' : ';')));
   if (dec === 'def') h += N('Dessa forma, restam preenchidos os pressupostos legais para o reconhecimento da isenção pleiteada.');
   else if (dec === 'indef') h += N('Dessa forma, não restam preenchidos os pressupostos legais para o reconhecimento da isenção pleiteada, uma vez que a ausência de qualquer requisito impede o seu reconhecimento (Decreto, art. 4º, § 1º).');
-  else if (dec === 'pend') h += N('Dessa forma, a análise do pedido depende do saneamento das pendências acima indicadas.');
+  else if (dec === 'pend') h += N('Dessa forma, antes de qualquer conclusão quanto ao deferimento ou indeferimento do pedido, faz-se necessária a verificação das pendências acima indicadas junto ao órgão competente.');
   else h += N(semInfo('análise ainda incompleta.'));
 
   /* conclusão */
@@ -697,7 +734,8 @@ function gerarParecer(){
     nao.forEach((r,i) => h += BL(`não atendido o requisito do inciso ${r.n} do art. 4º do Decreto Municipal nº 1.410/2026 (${esc(lc(r.t))})${s['obs_'+r.id] ? ': ' + esc(s['obs_'+r.id]) : ''}${i === nao.length - 1 ? '.' : ';'}`));
     h += N('O indeferimento deve ser motivado e comunicado ao interessado (Decreto, art. 38).');
   } else if (dec === 'pend'){
-    h += N('Ante o exposto, manifesta-se pela notificação do requerente para sanar as pendências indicadas, no prazo de 10 (dez) dias úteis, nos termos do artigo 29, § 2º, do Decreto Municipal nº 1.410/2026, podendo o não atendimento acarretar o arquivamento do pedido, sem prejuízo de novo protocolo (art. 29, § 3º).');
+    h += N(`Ante o exposto, deixa-se, por ora, de opinar pelo deferimento ou pelo indeferimento do pedido, manifestando-se pelo encaminhamento dos autos, por meio de ofício, para <b>${ph((s.destino || '').trim())}</b>, a fim de que verifique e se manifeste sobre as pendências indicadas${s.destino_obj ? ', especialmente: ' + esc(s.destino_obj) : ''}.`);
+    h += N('Após a resposta, os autos deverão retornar a este Departamento para conclusão da análise e emissão de novo parecer.');
   } else {
     h += N(semInfo('selecione a conclusão do parecer.'));
   }
@@ -705,7 +743,7 @@ function gerarParecer(){
   /* encaminhamento */
   h += HD('DO ENCAMINHAMENTO');
   h += N(dec === 'pend'
-    ? 'Notifique-se o requerente, nos termos do artigo 29, § 2º, do Decreto Municipal nº 1.410/2026, retornando os autos para nova análise após o prazo.'
+    ? `Oficie-se, com cópia das peças necessárias, para ${ph((s.destino || '').trim())}, solicitando a verificação dos pontos acima, com retorno dos autos a este Departamento de Fiscalização após a manifestação.`
     : 'Encaminhe-se o presente parecer à autoridade administrativa competente para despacho, nos termos do artigo 2º, § 2º, do Decreto Municipal nº 1.410/2026 e do artigo 446 da Lei Complementar nº 203/2022.');
   h += `<p class="c">Araguari/MG, ${new Date().toLocaleDateString('pt-BR')}.</p><p class="c">${ph(s.fiscal)}</p><p class="c">Matrícula: ${ph(s.matricula)}</p>`;
   $('parecer').innerHTML = h;
@@ -828,7 +866,7 @@ function condArt113(){
   const x = []; if (s.c_apos) x.push('Aposentado'); if (s.c_pens) x.push('Pensionista'); if (s.c_pne) x.push('Morador com necessidades especiais permanentes');
   return x.length ? x.join(' + ') : 'Não informada';
 }
-const RES_L = {def:'Deferido', indef:'Indeferido', pend:'Pendência (notificar requerente)', incompleta:'Sem conclusão'};
+const RES_L = {def:'Deferido', indef:'Indeferido', pend:'Encaminhado para verificação', incompleta:'Sem conclusão'};
 let reg = [];
 try { reg = JSON.parse(localStorage.getItem(REG_KEY) || '[]'); } catch(e){ reg = []; }
 const regKey = n => String(n).trim().toLowerCase();
@@ -844,7 +882,7 @@ function registrarProcesso(dec){
   parecerGerado = true;
   const n = (s.numero || '').trim();
   if (!n){ regMsg('Parecer gerado, mas NÃO salvo nem registrado: informe o nº do processo (item 1) e gere novamente.', true); return; }
-  curRec = {ts:new Date().toISOString(), numero:n, requerente:s.requerente||'', inscricao:s.inscricao||'', cci:s.cci||'', fiscal:s.fiscal||'', cond:condArt113(), resultado:RES_L[dec], tipo:s.tipo==='renov' ? 'Renovação' : 'Primeira vez'};
+  curRec = {ts:new Date().toISOString(), numero:n, requerente:s.requerente||'', inscricao:s.inscricao||'', cci:s.cci||'', fiscal:s.fiscal||'', cond:condArt113(), resultado:RES_L[dec] + (dec === 'pend' && (s.destino || '').trim() ? ' – ' + s.destino.trim() : ''), tipo:s.tipo==='renov' ? 'Renovação' : 'Primeira vez'};
   if (dirH){ salvarProcesso({registro:true}); return; }
   const i = reg.findIndex(r => regKey(r.numero) === regKey(n));
   if (i >= 0) reg[i] = curRec; else reg.push(curRec);
