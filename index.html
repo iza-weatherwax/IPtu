@@ -354,7 +354,7 @@ function build(){
 
   /* r3 */
   h += `<div class="req">${reqHead(REQ[2])}
-  ${R('Coeficiente de Edificação acima de 0,15? <small>(cadastro – art. 7º, §1º)</small>', S('ce',[['','Não analisado'],['sim','Sim'],['nao','Não']]))}
+  ${R('Coeficiente de Edificação igual ou superior a 0,15? <small>(cadastro – art. 7º, §1º)</small>', S('ce',[['','Não analisado'],['sim','Sim'],['nao','Não']]))}
   ${R('Construção em condições de uso / habitável?', S('hab',[['','Não analisado'],['sim','Sim'],['nao','Não (art. 7º, §2º; LC art. 96, par. único)']]))}
   ${C('r3_peq','Há apenas pequena construção, abrigo, depósito, cômodo isolado, edícula sem uso residencial efetivo ou estrutura sem habitabilidade (art. 7º, §3º – não caracteriza edificado por si só)')}
   ${obs('r3')}</div>`;
@@ -373,14 +373,14 @@ function build(){
   <b style="display:block;margin-top:6px">Substitutivos ou complementares, quando com elementos técnicos suficientes (art. 21, III, “b”)</b>`;
   DOC_PNE_SUBST.forEach((l,i) => h += C('ps_'+i,l));
   h += `${C('pn_saude','Encaminhado à Secretaria Municipal de Saúde para manifestação técnica (art. 10, §6º)')}
-  <p class="base">Relatório do CRAS/Desenvolvimento Social (art. 22) não substitui a avaliação médica ou multiprofissional.</p></div>
+  <p class="base">Relatório do CRAS/Desenvolvimento Social (art. 22, parágrafo único) não substitui a avaliação médica ou multiprofissional.</p></div>
   ${obs('r4')}</div>`;
 
   /* r5 */
   h += `<div class="req">${reqHead(REQ[4])}
   ${R('Declaração do requerente, sob as penas da lei (obrigatória – art. 21, V, “a”)', S('r5_decl',DOCST))}
   ${R('Consulta ao Cadastro de Contribuintes Imobiliário (verificação obrigatória da Administração – art. 21, V, “b”)', S('r5_cons',[['','Não realizada'],['nenhum','Realizada: nenhum outro imóvel'],['outro','Realizada: consta outro imóvel']]))}
-  <div id="r5Info" class="alert red" style="display:none">O art. 12 do Decreto impede a isenção se houver outro imóvel urbano, no Município ou fora dele, como proprietário, coproprietário, titular de domínio útil, possuidor a qualquer título, usufrutuário, usuário, habitador, compromissário comprador imitido na posse, cessionário, concessionário de direito real de uso ou ocupante que configure sujeição passiva.</div>
+  <div id="r5Info" class="alert red" style="display:none">O art. 12 do Decreto impede a isenção se o contribuinte possuir, no Município de Araguari ou em outro local, outro imóvel urbano ou de interesse urbanístico, como proprietário, coproprietário, titular de domínio útil, possuidor a qualquer título, usufrutuário, usuário ou habitador, compromissário comprador imitido na posse, cessionário de direitos, concessionário de direito real de uso, ou ocupante ou detentor de direito real ou possessório que configure sujeição passiva do IPTU.</div>
   ${R('Inscrições / detalhes encontrados', I('r5_det'))}
   <b style="display:block;margin-top:6px;font-size:12.5px">Complementares, quando necessários (art. 21, V, “c”)</b>`;
   R5_COMPL.forEach((l,i) => h += C('r5c_'+i,l));
@@ -575,7 +575,7 @@ function recalc(){
   const ce = s.ce;
   const al = {r1:'', r2:'', r3:'', r4:'', r5:'', r6:'', proc:''};
   if (ART6.some(([k]) => s[k])) al.r2 = `<div class="alert red">Situação do art. 6º, par. único: o imóvel não é considerado unifamiliar.</div>`;
-  if (ce === 'nao') al.r3 += `<div class="alert red">CE abaixo de 0,15: não é propriedade edificada (LC art. 95, §2º; Decreto art. 7º, §1º).</div>`;
+  if (ce === 'nao') al.r3 += `<div class="alert red">CE inferior a 0,15: não é propriedade edificada (LC art. 95, §2º; Decreto art. 7º, §1º).</div>`;
   if (s.hab==='nao') al.r3 += `<div class="alert red">Construção sem condições de uso é considerada não edificada (LC art. 96, par. único; Decreto art. 7º, §2º).</div>`;
   if (s.r3_peq) al.r3 += `<div class="alert">Art. 7º, §3º: pequena construção/abrigo/depósito/edícula sem uso residencial efetivo não caracteriza, por si só, imóvel edificado de uso residencial unifamiliar.</div>`;
   if (s.r1_ativ==='mei') al.r1 = `<div class="alert">Art. 14: a atividade de MEI só é admitida se todos os requisitos do art. 113 estiverem atendidos, inclusive a renda familiar.</div>`;
@@ -623,7 +623,7 @@ function gerarParecerTriagem(){
   h += N('O Decreto Municipal nº 1.410/2026, em seu artigo 4º, inciso IV, exige que o proprietário seja aposentado ou pensionista, ou que o imóvel tenha como morador pessoa com necessidades especiais permanentes, e estabelece que os requisitos são cumulativos, de modo que a ausência de qualquer deles impede o reconhecimento da isenção (§ 1º). Ausente essa condição, torna-se desnecessário o exame dos demais requisitos.');
   h += HD('DA CONCLUSÃO');
   h += N('Ante o exposto, <b>indefere-se</b> o pedido de reconhecimento da isenção do IPTU prevista no artigo 113 da Lei Complementar nº 203/2022, por não atendido o requisito do inciso IV do art. 4º do Decreto Municipal nº 1.410/2026 (proprietário aposentado ou pensionista, ou morador com necessidades especiais permanentes).');
-  h += N('Fica ressalvado ao requerente o direito de impugnação ou recurso, nos termos da Lei Complementar nº 203, de 2022.');
+  h += N('Fica ressalvado ao requerente o direito de impugnação ou recurso, nos termos da Lei Complementar nº 203, de 2022 (Decreto, art. 38).');
   h += `<p class="c">Araguari/MG, ${new Date().toLocaleDateString('pt-BR')}.</p><p class="c">${ph(s.fiscal)}</p><p class="c">Matrícula: ${ph(s.matricula)}</p>`;
   $('parecer').innerHTML = h;
   $('parecer').scrollIntoView({behavior:'smooth', block:'start'});
@@ -645,7 +645,7 @@ function gerarParecer(){
       if (s.r1_ativ==='mei') x += '; ' + MEI_ITENS.map(([k,l]) => `${lc(l.replace(/\s*\(.*\)$/,''))}: ${LBL[s[k]||'na'].toLowerCase()}`).join('; ') + `; renda familiar dentro do limite: ${eff('r6')==='ok'?'sim':eff('r6')==='nao'?'não':'não apurado'}`;
       return x; },
     r2: () => { const t = ART6.filter(([k]) => s[k]).map(([k,l]) => lc(l.replace(/\s*\(.*\)$/,''))); return t.length ? 'constatou-se que o imóvel está ' + t.join('; ') + ' (Decreto, art. 6º, parágrafo único)' : (s.r2_conf==='sim' ? 'o uso unifamiliar foi confirmado' : ''); },
-    r3: () => { const ce = {sim:'acima de 0,15', nao:'abaixo de 0,15'}[s.ce] || ''; return (ce || s.hab) ? `Coeficiente de Edificação (CE) ${ce || '<mark>[PREENCHER]</mark>'} (LC nº 203/2022, art. 95, § 2º)${s.hab==='sim' ? ', construção em condições de uso' : s.hab==='nao' ? ', construção sem condições de uso (LC nº 203/2022, art. 96, parágrafo único)' : ''}${s.r3_peq ? '; há indício de construção sem uso residencial efetivo (Decreto, art. 7º, § 3º)' : ''}` : ''; },
+    r3: () => { const ce = {sim:'igual ou superior a 0,15', nao:'inferior a 0,15'}[s.ce] || ''; return (ce || s.hab) ? `Coeficiente de Edificação (CE) ${ce || '<mark>[PREENCHER]</mark>'} (LC nº 203/2022, art. 95, § 2º)${s.hab==='sim' ? ', construção em condições de uso' : s.hab==='nao' ? ', construção sem condições de uso (LC nº 203/2022, art. 96, parágrafo único)' : ''}${s.r3_peq ? '; há indício de construção sem uso residencial efetivo (Decreto, art. 7º, § 3º)' : ''}` : ''; },
     r4: () => { if (s.c_nenhuma) return 'não foi comprovada nenhuma das hipóteses exigidas (proprietário aposentado, proprietário pensionista ou morador com necessidades especiais permanentes)'; const x = []; if (s.c_apos) x.push(`aposentado – ${s.ap_doc ? esc(lc(s.ap_doc)) : 'sem comprovação apresentada'}`); if (s.c_pens) x.push(`pensionista – ${s.pe_doc ? esc(lc(s.pe_doc)) : 'sem comprovação apresentada'}${s.pe_obito?'; certidão de óbito':''}${s.pe_origem?'; documento de origem da pensão':''}`);
       if (s.c_pne){ const sub = DOC_PNE_SUBST.filter((l,i) => s['ps_'+i]); x.push(`morador com necessidades especiais permanentes – laudo/relatório: ${s.pn_laudo ? esc(lc(s.pn_laudo)) : 'não apresentado'}; identificação: ${stD(s.pn_id)}; residência efetiva: ${stD(s.pn_res)}; caráter permanente ou duradouro: ${{sim:'conclusivo',inconc:'não conclusivo',temp:'condição temporária (Decreto, art. 10, § 5º)'}[s.pn_perm] || 'não analisado'}${sub.length ? '; documentos adicionais: ' + sub.map(l => esc(lc(l))).join(', ') : ''}${s.pn_saude ? '; encaminhado à Secretaria Municipal de Saúde (Decreto, art. 10, § 6º)' : ''}`); }
       return x.join('. '); },
@@ -725,6 +725,7 @@ function gerarParecer(){
   h += HD('DA CONCLUSÃO');
   if (dec === 'def'){
     h += N(`Ante o exposto, <b>defere-se</b> o reconhecimento da isenção do IPTU prevista no artigo 113 da Lei Complementar nº 203/2022, considerando o cumprimento dos requisitos legais e regulamentares, especialmente aqueles estabelecidos pelo Decreto Municipal nº 1.410/2026, com eficácia a partir do exercício de <b>${exi ? exi : '<mark>[PREENCHER]</mark>'}</b>, em caráter precário e pelo prazo determinado de 4 (quatro) anos, contado a partir do exercício para o qual a isenção for deferida (LC nº 203/2022, art. 113, § 3º; Decreto, art. 32, caput e § 1º).`);
+    h += N('Emita-se o Certificado de Imunidade e de Isenção Tributária, com registro no Cadastro de Contribuintes Imobiliário (Decreto, art. 2º, § 2º, e art. 31).');
     h += N('O beneficiário deverá comunicar à Administração Tributária Municipal, no prazo de 30 (trinta) dias, qualquer alteração que possa interferir na manutenção da isenção (Decreto, art. 33, § 1º).');
   } else if (dec === 'indef'){
     h += N('Ante o exposto, <b>indefere-se</b> o pedido de reconhecimento da isenção do IPTU prevista no artigo 113 da Lei Complementar nº 203/2022, pelos seguintes motivos:');
@@ -732,7 +733,7 @@ function gerarParecer(){
     if (!nao.length) h += BL(semInfo('indicar o motivo do indeferimento (nenhum requisito foi marcado como não atendido).'));
     nao.forEach((r,i) => h += BL(`não atendido o requisito do inciso ${r.n} do art. 4º do Decreto Municipal nº 1.410/2026 (${esc(lc(r.t))})${s['obs_'+r.id] ? ': ' + esc(s['obs_'+r.id]) : ''}${i === nao.length - 1 ? '.' : ';'}`));
   } else if (dec === 'pend'){
-    h += N(`Ante o exposto, deixa-se, por ora, de decidir pelo deferimento ou pelo indeferimento do pedido, determinando-se o encaminhamento dos autos, por meio de ofício, para <b>${ph((s.destino || '').trim())}</b>, a fim de que verifique e se manifeste sobre as pendências indicadas${s.destino_obj ? ', especialmente: ' + esc(s.destino_obj) : ''}.`);
+    h += N(`Ante o exposto, deixa-se, por ora, de decidir pelo deferimento ou pelo indeferimento do pedido, determinando-se o encaminhamento dos autos, por meio de ofício, para <b>${ph((s.destino || '').trim())}</b>, nos termos do artigo 28 do Decreto Municipal nº 1.410/2026, a fim de que verifique e se manifeste sobre as pendências indicadas${s.destino_obj ? ', especialmente: ' + esc(s.destino_obj) : ''}.`);
     h += N('Após a resposta, os autos deverão retornar a este Departamento para conclusão da análise e decisão.');
   } else {
     h += N(semInfo('selecione a conclusão do parecer.'));
@@ -743,7 +744,7 @@ function gerarParecer(){
     h += HD('DO ENCAMINHAMENTO');
     h += N(`Oficie-se, com cópia das peças necessárias, para ${ph((s.destino || '').trim())}, solicitando a verificação dos pontos acima, com retorno dos autos a este Departamento de Fiscalização após a manifestação.`);
   } else if (dec === 'indef'){
-    h += N('Fica ressalvado ao requerente o direito de impugnação ou recurso, nos termos da Lei Complementar nº 203, de 2022.');
+    h += N('Fica ressalvado ao requerente o direito de impugnação ou recurso, nos termos da Lei Complementar nº 203, de 2022 (Decreto, art. 38).');
   }
   h += `<p class="c">Araguari/MG, ${new Date().toLocaleDateString('pt-BR')}.</p><p class="c">${ph(s.fiscal)}</p><p class="c">Matrícula: ${ph(s.matricula)}</p>`;
   $('parecer').innerHTML = h;
