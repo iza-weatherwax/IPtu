@@ -622,7 +622,7 @@ function gerarParecerTriagem(){
   h += N('O artigo 113 da Lei Complementar nº 203/2022 isenta do IPTU os imóveis utilizados unicamente para fins residenciais, considerados de uso unifamiliar, edificados, de um mesmo proprietário que seja aposentado ou pensionista ou que tenham como morador portador de necessidades especiais permanentes, que não possua outra propriedade e que não tenham renda familiar somada maior que 1,5 (um inteiro e meio) salários-mínimos.');
   h += N('O Decreto Municipal nº 1.410/2026, em seu artigo 4º, inciso IV, exige que o proprietário seja aposentado ou pensionista, ou que o imóvel tenha como morador pessoa com necessidades especiais permanentes, e estabelece que os requisitos são cumulativos, de modo que a ausência de qualquer deles impede o reconhecimento da isenção (§ 1º). Ausente essa condição, torna-se desnecessário o exame dos demais requisitos.');
   h += HD('DA CONCLUSÃO');
-  h += N('Ante o exposto, manifesta-se desfavoravelmente ao reconhecimento da isenção do IPTU prevista no artigo 113 da Lei Complementar nº 203/2022, por não atendido o requisito do inciso IV do art. 4º do Decreto Municipal nº 1.410/2026 (proprietário aposentado ou pensionista, ou morador com necessidades especiais permanentes).');
+  h += N('Ante o exposto, <b>indefere-se</b> o pedido de reconhecimento da isenção do IPTU prevista no artigo 113 da Lei Complementar nº 203/2022, por não atendido o requisito do inciso IV do art. 4º do Decreto Municipal nº 1.410/2026 (proprietário aposentado ou pensionista, ou morador com necessidades especiais permanentes).');
   h += N('Fica ressalvado ao requerente o direito de impugnação ou recurso, nos termos da Lei Complementar nº 203, de 2022.');
   h += `<p class="c">Araguari/MG, ${new Date().toLocaleDateString('pt-BR')}.</p><p class="c">${ph(s.fiscal)}</p><p class="c">Matrícula: ${ph(s.matricula)}</p>`;
   $('parecer').innerHTML = h;
@@ -724,16 +724,16 @@ function gerarParecer(){
   /* conclusão */
   h += HD('DA CONCLUSÃO');
   if (dec === 'def'){
-    h += N(`Ante o exposto, manifesta-se favoravelmente ao reconhecimento da isenção do IPTU prevista no artigo 113 da Lei Complementar nº 203/2022, considerando o cumprimento dos requisitos legais e regulamentares, especialmente aqueles estabelecidos pelo Decreto Municipal nº 1.410/2026, com eficácia a partir do exercício de <b>${exi ? exi : '<mark>[PREENCHER]</mark>'}</b>, em caráter precário e pelo prazo determinado de 4 (quatro) anos, contado a partir do exercício para o qual a isenção for deferida (LC nº 203/2022, art. 113, § 3º; Decreto, art. 32 e § 1º).`);
+    h += N(`Ante o exposto, <b>defere-se</b> o reconhecimento da isenção do IPTU prevista no artigo 113 da Lei Complementar nº 203/2022, considerando o cumprimento dos requisitos legais e regulamentares, especialmente aqueles estabelecidos pelo Decreto Municipal nº 1.410/2026, com eficácia a partir do exercício de <b>${exi ? exi : '<mark>[PREENCHER]</mark>'}</b>, em caráter precário e pelo prazo determinado de 4 (quatro) anos, contado a partir do exercício para o qual a isenção for deferida (LC nº 203/2022, art. 113, § 3º; Decreto, art. 32 e § 1º).`);
     h += N('O beneficiário deverá comunicar à Administração Tributária Municipal, no prazo de 30 (trinta) dias, qualquer alteração que possa interferir na manutenção da isenção (Decreto, art. 33, § 1º).');
   } else if (dec === 'indef'){
-    h += N('Ante o exposto, manifesta-se desfavoravelmente ao reconhecimento da isenção do IPTU prevista no artigo 113 da Lei Complementar nº 203/2022, pelos seguintes motivos:');
+    h += N('Ante o exposto, <b>indefere-se</b> o pedido de reconhecimento da isenção do IPTU prevista no artigo 113 da Lei Complementar nº 203/2022, pelos seguintes motivos:');
     const nao = REQ.filter(r => eff(r.id) === 'nao');
     if (!nao.length) h += BL(semInfo('indicar o motivo do indeferimento (nenhum requisito foi marcado como não atendido).'));
     nao.forEach((r,i) => h += BL(`não atendido o requisito do inciso ${r.n} do art. 4º do Decreto Municipal nº 1.410/2026 (${esc(lc(r.t))})${s['obs_'+r.id] ? ': ' + esc(s['obs_'+r.id]) : ''}${i === nao.length - 1 ? '.' : ';'}`));
   } else if (dec === 'pend'){
-    h += N(`Ante o exposto, deixa-se, por ora, de opinar pelo deferimento ou pelo indeferimento do pedido, manifestando-se pelo encaminhamento dos autos, por meio de ofício, para <b>${ph((s.destino || '').trim())}</b>, a fim de que verifique e se manifeste sobre as pendências indicadas${s.destino_obj ? ', especialmente: ' + esc(s.destino_obj) : ''}.`);
-    h += N('Após a resposta, os autos deverão retornar a este Departamento para conclusão da análise e emissão de novo parecer.');
+    h += N(`Ante o exposto, deixa-se, por ora, de decidir pelo deferimento ou pelo indeferimento do pedido, determinando-se o encaminhamento dos autos, por meio de ofício, para <b>${ph((s.destino || '').trim())}</b>, a fim de que verifique e se manifeste sobre as pendências indicadas${s.destino_obj ? ', especialmente: ' + esc(s.destino_obj) : ''}.`);
+    h += N('Após a resposta, os autos deverão retornar a este Departamento para conclusão da análise e decisão.');
   } else {
     h += N(semInfo('selecione a conclusão do parecer.'));
   }
