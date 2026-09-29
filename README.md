@@ -13,6 +13,18 @@ nenhuma dessas hipóteses se aplica, o assistente indica indeferimento
 automático, esconde o restante do formulário e gera um parecer simplificado —
 basta preencher a identificação do processo.
 
+## Modelo próprio de parecer
+
+Por padrão o parecer é gerado no formato automático do Assistente. No card
+**Modelo do parecer** é possível escolher **Meu modelo** e cadastrar um texto
+próprio para cada resultado (deferimento, indeferimento, encaminhamento por
+pendência e indeferimento na triagem) — digitando ou carregando um arquivo
+`.docx` ou `.txt`. O modelo usa campos como `{{requerente}}`, `{{inscricao}}`,
+`{{motivos}}`, `{{pendencias}}` e `{{n}}` (numeração), e pode reaproveitar
+blocos do texto automático, como `{{bloco:fatos}}`. Resultado sem modelo
+cadastrado continua saindo no formato automático. Os modelos ficam só no
+navegador; o botão **Baixar modelos** gera uma cópia em `.json`.
+
 ## Como funciona
 
 O programa é um único arquivo estático (`index.html`), com HTML, CSS e

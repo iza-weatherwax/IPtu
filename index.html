@@ -102,6 +102,35 @@ aside ul{margin:4px 0 0;padding-left:18px;font-size:12.5px}
     <p class="base">O navegador não permite abrir sozinho a pasta onde este arquivo está; por isso a escolha é feita aqui, no início. A pasta fica lembrada nas próximas vezes.</p>
   </div>
 </div>
+<div id="modeloModal" style="display:none;position:fixed;inset:0;background:rgba(20,30,40,.6);z-index:60;align-items:flex-start;justify-content:center;padding:16px;overflow:auto">
+  <div class="card" style="max-width:920px;width:100%;margin:0">
+    <h2>Meus modelos de parecer</h2>
+    <p class="base">Um modelo para cada resultado. Quando o modelo do resultado estiver vazio, o parecer sai no formato automático. Os modelos ficam guardados só neste navegador; use “Baixar modelos” para ter uma cópia ou levá-los para outro computador.</p>
+    <div class="bar" id="mdAbas"></div>
+    <textarea id="mdTexto" spellcheck="false" style="min-height:340px;font-family:Consolas,monospace;font-size:12.5px" placeholder="Escreva o modelo aqui, carregue um arquivo (.docx ou .txt) ou clique em “Inserir exemplo”."></textarea>
+    <div class="bar">
+      <button class="sec sm" id="mdCarregar">Carregar arquivo (.docx ou .txt)</button>
+      <button class="sec sm" id="mdExemplo">Inserir exemplo</button>
+      <button class="sec sm" id="mdLimpar">Apagar este modelo</button>
+      <button class="sec sm" id="mdPrevia">Pré-visualizar com o processo atual</button>
+      <button class="sec sm" id="mdBaixar">Baixar modelos (.json)</button>
+      <button class="sec sm" id="mdImportar">Importar modelos (.json)</button>
+    </div>
+    <input type="file" id="mdFile" accept=".docx,.txt" style="display:none">
+    <input type="file" id="mdFileJson" accept=".json" style="display:none">
+    <details style="margin:6px 0"><summary style="cursor:pointer"><b>Como escrever o modelo</b> e campos disponíveis (clique num campo para inseri-lo)</summary>
+      <div class="base" style="margin-top:6px">
+        Cada linha vira um parágrafo. Linha começando com <b># </b> vira título (ex.: <code># DA CONCLUSÃO</code>); com <b>- </b> vira item com marcador; com <b>| </b> fica centralizada. Use <code>**texto**</code> para negrito e <code>{{n}}</code> para a numeração automática dos parágrafos (ex.: <code>{{n}}. Ante o exposto…</code>).<br>
+        Uma lista ou um bloco sozinho na linha é inserido completo (em itens ou com os parágrafos do texto automático); no meio de uma frase, entra como texto corrido. Campos não preenchidos no processo saem como <mark>[PREENCHER]</mark>.
+      </div>
+      <div class="base" style="margin-top:6px"><b>Campos</b></div><div class="bar" id="mdCampos"></div>
+      <div class="base"><b>Listas</b></div><div class="bar" id="mdListas"></div>
+      <div class="base"><b>Blocos do parecer automático</b></div><div class="bar" id="mdBlocos"></div>
+    </details>
+    <div id="mdPrev" class="doc" style="display:none;border:1px solid var(--bd);border-radius:6px;padding:12px;max-height:340px;overflow:auto;margin:8px 0"></div>
+    <div class="bar"><button id="mdSalvar">Salvar e fechar</button><button class="sec" id="mdCancelar">Cancelar</button></div>
+  </div>
+</div>
 <header>
   <h1>Assistente de Parecer – Isenção de IPTU (pessoa física)</h1>
   <p>Art. 113 da LC 203/2022, regulamentado pelo Decreto nº 1.410/2026. Ferramenta de apoio: não decide, não bloqueia e não substitui a análise do fiscal. Os dados ficam apenas neste computador.</p>
@@ -141,6 +170,15 @@ aside ul{margin:4px 0 0;padding-left:18px;font-size:12.5px}
       <button class="sec" id="btnSalvar" title="Ctrl+S">Salvar processo</button>
     </div>
     <div id="saveInd" class="base">Processo novo, ainda não salvo.</div>
+  </div>
+  <div class="card">
+    <h2>Modelo do parecer</h2>
+    <select id="modeloUso">
+      <option value="auto">Automático (padrão do Assistente)</option>
+      <option value="meu">Meu modelo</option>
+    </select>
+    <div class="bar"><button class="sec sm" id="btnModelos">Editar meus modelos…</button></div>
+    <div id="modeloStatus" class="base"></div>
   </div>
   <div class="card"><h2>Impeditivos</h2><ul id="lstNao"><li>–</li></ul></div>
   <div class="card"><h2>Pendências</h2><ul id="lstPend"><li>–</li></ul></div>
@@ -607,7 +645,8 @@ function recalc(){
 }
 
 /* ============ parecer ============ */
-function gerarParecerTriagem(){
+const TRI_MOTIVO_PARECER = 'não atendido o requisito do inciso IV do art. 4º do Decreto Municipal nº 1.410/2026 (proprietário aposentado ou pensionista, ou morador com necessidades especiais permanentes)';
+function montarTriagem(){
   let n = 0;
   const HD = t => `<p class="h">${t}</p>`;
   const N = t => `<p class="n">${++n}. ${t}</p>`;
@@ -624,13 +663,10 @@ function gerarParecerTriagem(){
   h += HD('DA CONCLUSÃO');
   h += N('Ante o exposto, <b>indefere-se</b> o pedido de reconhecimento da isenção do IPTU prevista no artigo 113 da Lei Complementar nº 203/2022, por não atendido o requisito do inciso IV do art. 4º do Decreto Municipal nº 1.410/2026 (proprietário aposentado ou pensionista, ou morador com necessidades especiais permanentes).');
   h += N('Fica ressalvado ao requerente o direito de impugnação ou recurso, nos termos da Lei Complementar nº 203, de 2022 (Decreto, art. 38).');
-  h += `<p class="c">Araguari/MG, ${new Date().toLocaleDateString('pt-BR')}.</p><p class="c">${ph(s.fiscal)}</p><p class="c">Matrícula: ${ph(s.matricula)}</p>`;
-  $('parecer').innerHTML = h;
-  $('parecer').scrollIntoView({behavior:'smooth', block:'start'});
-  registrarProcesso('indef');
+  return {h, dec:'indef', key:'tri', ctx:{pres:[], aus:[], itens:[], pends:[], motivos:[TRI_MOTIVO_PARECER + (s.obs_tri ? ': ' + esc(s.obs_tri) : '')]}};
 }
-function gerarParecer(){
-  if (triagemIndef()) return gerarParecerTriagem();
+function montarParecer(){
+  if (triagemIndef()) return montarTriagem();
   const c = coletar(); const dec = s.decisao || autoDecisao(c); const rd = renda(); const exi = exiFinal();
   const ex = num(s.exercicio); const renov = s.tipo === 'renov';
   const stD = v => v==='ok' ? 'apresentado' : v==='falta' ? 'ausente ou insuficiente' : 'não conferido';
@@ -746,10 +782,124 @@ function gerarParecer(){
   } else if (dec === 'indef'){
     h += N('Fica ressalvado ao requerente o direito de impugnação ou recurso, nos termos da Lei Complementar nº 203, de 2022 (Decreto, art. 38).');
   }
-  h += `<p class="c">Araguari/MG, ${new Date().toLocaleDateString('pt-BR')}.</p><p class="c">${ph(s.fiscal)}</p><p class="c">Matrícula: ${ph(s.matricula)}</p>`;
-  $('parecer').innerHTML = h;
+  const motivos = REQ.filter(r => eff(r.id) === 'nao').map(r => `não atendido o requisito do inciso ${r.n} do art. 4º do Decreto Municipal nº 1.410/2026 (${esc(lc(r.t))})${s['obs_'+r.id] ? ': ' + esc(s['obs_'+r.id]) : ''}`);
+  return {h, dec, key:dec, ctx:{pres:pres.map(esc), aus:aus.map(esc), itens, pends, motivos}};
+}
+const assinatura = () => `<p class="c">Araguari/MG, ${new Date().toLocaleDateString('pt-BR')}.</p><p class="c">${ph(s.fiscal)}</p><p class="c">Matrícula: ${ph(s.matricula)}</p>`;
+function gerarParecer(){
+  const r = montarParecer();
+  const m = modeloAtivo(r.key);
+  $('parecer').innerHTML = m ? aplicarModelo(m, r) : r.h + assinatura();
   $('parecer').scrollIntoView({behavior:'smooth', block:'start'});
-  registrarProcesso(dec);
+  registrarProcesso(r.dec);
+  if (m) regMsg('Parecer gerado com o seu modelo (' + MOD_L[r.key] + ').');
+}
+
+/* ============ modelos próprios de parecer ============ */
+const MOD_KEY = 'iptuModelos';
+const MOD_L = {def:'Deferimento', indef:'Indeferimento', pend:'Encaminhamento (pendência)', tri:'Indeferimento na triagem'};
+let modelos = {usar:false, def:'', indef:'', pend:'', tri:''};
+try { Object.assign(modelos, JSON.parse(localStorage.getItem(MOD_KEY) || '{}')); } catch(e){}
+const modSave = () => { try { localStorage.setItem(MOD_KEY, JSON.stringify(modelos)); return true; } catch(e){ return false; } };
+const modeloAtivo = key => modelos.usar && MOD_L[key] && (modelos[key] || '').trim() ? modelos[key] : null;
+const MOD_CAMPOS = [
+  ['numero','Nº do processo'],['protocolo','Data do protocolo'],['tipo_pedido','Primeira vez / renovação'],['exercicio','Exercício de referência'],
+  ['requerente','Requerente'],['cpf','CPF'],['inscricao','Inscrição imobiliária'],['cci','CCI'],['endereco','Endereço do imóvel'],['condicao','Condição do requerente'],
+  ['hipotese','Hipótese do art. 113 (triagem)'],['resultado','Resultado (Deferimento, Indeferimento…)'],['exercicio_inicial','Exercício inicial de eficácia'],
+  ['renda_total','Renda familiar computada'],['limite_renda','Limite de 1,5 salário-mínimo'],['salario_minimo','Salário-mínimo'],
+  ['destino','Órgão de destino (pendência)'],['destino_obs','O que verificar (pendência)'],['obs_triagem','Observação da triagem'],
+  ['fiscal','Fiscal'],['matricula','Matrícula'],['data','Data de hoje']
+];
+const MOD_LISTAS = [['motivos','Motivos do indeferimento'],['pendencias','Pendências'],['requisitos','Situação de cada requisito'],['documentos_apresentados','Documentos apresentados'],['documentos_ausentes','Documentos ausentes']];
+const MOD_BLOCOS = [['ementa','Ementa'],['objeto','Do objeto'],['fatos','Dos fatos (inclui o quadro de renda)'],['fundamentacao','Da fundamentação jurídica'],['analise','Da análise técnica'],['conclusao','Da conclusão'],['encaminhamento','Do encaminhamento'],['assinatura','Local, data, fiscal e matrícula']];
+const MOD_SEC = {'DO OBJETO':'objeto','DOS FATOS':'fatos','DA FUNDAMENTAÇÃO JURÍDICA':'fundamentacao','DA ANÁLISE TÉCNICA':'analise','DA CONCLUSÃO':'conclusao','DO ENCAMINHAMENTO':'encaminhamento'};
+/* divide o parecer automático em blocos, pelos títulos */
+function blocosAuto(h){
+  const b = {ementa:'', objeto:'', fatos:'', fundamentacao:'', analise:'', conclusao:'', encaminhamento:'', assinatura:assinatura()}; let cur = null;
+  const box = document.createElement('div'); box.innerHTML = h;
+  [...box.children].forEach((el, i) => {
+    if (el.className === 'h'){ const k = MOD_SEC[el.textContent.trim()]; if (k){ cur = k; b[k] = ''; return; } if (i === 0){ b.ementa = el.textContent.trim(); return; } }
+    if (cur) b[cur] += el.outerHTML;
+  });
+  return b;
+}
+function camposModelo(r){
+  const rd = renda(), ex = exiFinal();
+  const cond = {prop:'proprietário', poss:'possuidor/posseiro', cess:'cessionário/promitente comprador', outra:'ocupante em outra condição'}[s.condicao];
+  return {
+    numero:ph(s.numero), protocolo:ph(dbr(s.protocolo)), tipo_pedido:s.tipo==='renov' ? 'renovação' : 'primeira vez', exercicio:ph(s.exercicio),
+    requerente:ph(s.requerente), cpf:ph(s.cpf), inscricao:ph(s.inscricao), cci:ph(s.cci), endereco:ph(s.endereco), condicao:ph(cond),
+    hipotese:esc(condArt113()), resultado:{def:'Deferimento', indef:'Indeferimento', pend:'Encaminhamento para verificação'}[r.dec] || ph(''),
+    exercicio_inicial:ph(ex ? String(ex) : ''), renda_total:brl(rd.total), limite_renda:rd.lim ? brl(rd.lim) : ph(''), salario_minimo:rd.sm > 0 ? brl(rd.sm) : ph(''),
+    destino:ph((s.destino || '').trim()), destino_obs:esc(s.destino_obj || ''), obs_triagem:esc(s.obs_tri || ''),
+    fiscal:ph(s.fiscal), matricula:ph(s.matricula), data:new Date().toLocaleDateString('pt-BR')
+  };
+}
+const NUM = '\u0001';
+/* transforma o texto do modelo em parecer: # título, - item, | centralizado, **negrito**, {{campo}}, {{n}} numeração */
+function aplicarModelo(txt, r){
+  const f = camposModelo(r), bl = blocosAuto(r.h);
+  const listas = {motivos:r.ctx.motivos, pendencias:r.ctx.pends.map(x => x.replace(/^Pendência: /,'')), requisitos:r.ctx.itens, documentos_apresentados:r.ctx.pres, documentos_ausentes:r.ctx.aus};
+  const fim = (i, n) => i === n - 1 ? '.' : ';';
+  const inl = t => esc(t).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>').replace(/\{\{\s*([\w:]+)\s*\}\}/g, (m, k) => {
+    k = k.toLowerCase();
+    if (k === 'n') return NUM;
+    if (k in f) return f[k];
+    if (k in listas) return listas[k].length ? listas[k].join('; ') : 'nenhum';
+    if (k.startsWith('bloco:') && k.slice(6) in bl){ const d = document.createElement('div'); d.innerHTML = bl[k.slice(6)]; return esc(d.textContent); }
+    return `<mark>[campo desconhecido: ${esc(k)}]</mark>`;
+  });
+  let h = '';
+  String(txt).replace(/\r/g,'').split('\n').forEach(linha => {
+    const l = linha.trim(); if (!l) return;
+    const so = /^\{\{\s*([\w:]+)\s*\}\}$/.exec(l); const k = so && so[1].toLowerCase();
+    if (k && k.startsWith('bloco:') && k.slice(6) in bl){ h += k === 'bloco:ementa' ? `<p class="h">${esc(bl.ementa)}</p>` : bl[k.slice(6)].replace(/(<p class="n">)\d+\. /g, `$1${NUM}. `); return; }
+    if (k && k in listas){ const a = listas[k]; h += a.length ? a.map((x,i) => `<p class="b"><span class="bl">⦁</span> ${x}${fim(i, a.length)}</p>`).join('') : `<p class="b"><span class="bl">⦁</span> nenhum.</p>`; return; }
+    if (/^#\s/.test(l)) h += `<p class="h">${inl(l.replace(/^#\s+/,''))}</p>`;
+    else if (/^\|\s?/.test(l)) h += `<p class="c">${inl(l.replace(/^\|\s?/,''))}</p>`;
+    else if (/^[-•⦁]\s/.test(l)) h += `<p class="b"><span class="bl">⦁</span> ${inl(l.replace(/^[-•⦁]\s+/,''))}</p>`;
+    else h += `<p class="n">${inl(l)}</p>`;
+  });
+  let n = 0; return h.replace(new RegExp(NUM, 'g'), () => String(++n));
+}
+/* lê o texto de um .docx (zip) no próprio navegador */
+async function lerDocx(buf){
+  const u8 = new Uint8Array(buf), dv = new DataView(buf);
+  let e = u8.length - 22; while (e >= 0 && dv.getUint32(e, true) !== 0x06054b50) e--;
+  if (e < 0) throw new Error('arquivo .docx inválido');
+  let p = dv.getUint32(e + 16, true); const tot = dv.getUint16(e + 10, true); let xml = null;
+  for (let i = 0; i < tot; i++){
+    const met = dv.getUint16(p + 10, true), csz = dv.getUint32(p + 20, true), nl = dv.getUint16(p + 28, true), xl = dv.getUint16(p + 30, true), cl = dv.getUint16(p + 32, true), lo = dv.getUint32(p + 42, true);
+    if (new TextDecoder().decode(u8.subarray(p + 46, p + 46 + nl)) === 'word/document.xml'){
+      const ini = lo + 30 + dv.getUint16(lo + 26, true) + dv.getUint16(lo + 28, true), dados = u8.subarray(ini, ini + csz);
+      xml = met === 0 ? new TextDecoder().decode(dados) : await new Response(new Blob([dados]).stream().pipeThrough(new DecompressionStream('deflate-raw'))).text();
+      break;
+    }
+    p += 46 + nl + xl + cl;
+  }
+  if (!xml) throw new Error('o arquivo não tem o texto de um documento Word');
+  const W = 'http://schemas.openxmlformats.org/wordprocessingml/2006/main';
+  const doc = new DOMParser().parseFromString(xml, 'application/xml');
+  const on = el => el && !/^(0|false|off)$/i.test(el.getAttributeNS(W, 'val') || '');
+  const linhas = [];
+  [...doc.getElementsByTagNameNS(W, 'p')].forEach(pp => {
+    let txt = '', negr = 0, total = 0;
+    [...pp.getElementsByTagNameNS(W, 'r')].forEach(rr => {
+      let t = ''; [...rr.childNodes].forEach(c => { if (c.localName === 't') t += c.textContent; else if (c.localName === 'tab' || c.localName === 'br') t += ' '; });
+      if (!t) return; total += t.trim().length;
+      const b = on(rr.getElementsByTagNameNS(W, 'b')[0]); if (b) negr += t.trim().length;
+      txt += b && t.trim() ? t.replace(/^(\s*)(.*?)(\s*)$/, '$1**$2**$3') : t;
+    });
+    txt = txt.replace(/\*\*\*\*/g, '').replace(/\s+/g, ' ').trim(); if (!txt) return;
+    const jc = pp.getElementsByTagNameNS(W, 'jc')[0], centro = jc && jc.getAttributeNS(W, 'val') === 'center';
+    const lista = pp.getElementsByTagNameNS(W, 'numPr').length > 0;
+    const limpo = txt.replace(/\*\*/g, '');
+    if (total && negr === total && limpo.length < 90 && limpo === limpo.toUpperCase()) linhas.push('# ' + limpo);
+    else if (centro) linhas.push('| ' + txt);
+    else if (lista) linhas.push('- ' + txt);
+    else linhas.push(txt.replace(/^(\*\*)?\d+\.\s+/, '$1{{n}}. '));
+  });
+  return linhas.join('\n');
 }
 
 /* ============ exportação Word (.docx) no layout do modelo da Fazenda ============ */
@@ -1077,6 +1227,66 @@ document.addEventListener('click', e => {
   if (t.id==='addRend'){ s.rend.push({m:'0', tipo:'aposent', valor:'', doc:''}); renderRend(); recalc(); }
 });
 $('btnGerar').onclick = $('btnGerar2').onclick = gerarParecer;
+/* modelos próprios: tela de edição */
+const MOD_EX = {
+  tri: '# Isenção de IPTU. Art. 113 da LC nº 203/2022. Decreto Municipal nº 1.410/2026. Não enquadramento.\n# DO OBJETO\n{{n}}. Trata-se de pedido de isenção de IPTU formulado por {{requerente}} (CPF {{cpf}}), relativo ao imóvel de inscrição imobiliária nº {{inscricao}}, situado em {{endereco}}, para o exercício de {{exercicio}}.\n# DA ANÁLISE\n{{n}}. Verificou-se que o proprietário não é aposentado nem pensionista e que o imóvel não tem como morador pessoa com necessidades especiais permanentes. {{obs_triagem}}\n# DA CONCLUSÃO\n{{n}}. Ante o exposto, **indefere-se** o pedido, por:\n{{motivos}}\n{{n}}. Fica ressalvado ao requerente o direito de impugnação ou recurso, nos termos da Lei Complementar nº 203, de 2022 (Decreto, art. 38).\n{{bloco:assinatura}}',
+  def: '{{bloco:ementa}}\n# DO OBJETO\n{{n}}. Trata-se de pedido de isenção de IPTU formulado por {{requerente}} (CPF {{cpf}}), relativo ao imóvel de inscrição imobiliária nº {{inscricao}}, situado em {{endereco}}, para o exercício de {{exercicio}}.\n# DOS FATOS\n{{bloco:fatos}}\n# DA ANÁLISE\n{{n}}. Da análise dos requisitos do art. 4º do Decreto Municipal nº 1.410/2026, verificou-se:\n{{requisitos}}\n# DA CONCLUSÃO\n{{n}}. Ante o exposto, **defere-se** o reconhecimento da isenção do IPTU, com eficácia a partir do exercício de **{{exercicio_inicial}}**, pelo prazo de 4 (quatro) anos (Decreto, art. 32).\n{{bloco:assinatura}}',
+  indef: '{{bloco:ementa}}\n# DO OBJETO\n{{n}}. Trata-se de pedido de isenção de IPTU formulado por {{requerente}} (CPF {{cpf}}), relativo ao imóvel de inscrição imobiliária nº {{inscricao}}, situado em {{endereco}}, para o exercício de {{exercicio}}.\n# DOS FATOS\n{{bloco:fatos}}\n# DA ANÁLISE\n{{n}}. Da análise dos requisitos do art. 4º do Decreto Municipal nº 1.410/2026, verificou-se:\n{{requisitos}}\n# DA CONCLUSÃO\n{{n}}. Ante o exposto, **indefere-se** o pedido, pelos seguintes motivos:\n{{motivos}}\n{{n}}. Fica ressalvado ao requerente o direito de impugnação ou recurso, nos termos da Lei Complementar nº 203, de 2022 (Decreto, art. 38).\n{{bloco:assinatura}}',
+  pend: '{{bloco:ementa}}\n# DO OBJETO\n{{n}}. Trata-se de pedido de isenção de IPTU formulado por {{requerente}} (CPF {{cpf}}), relativo ao imóvel de inscrição imobiliária nº {{inscricao}}, situado em {{endereco}}, para o exercício de {{exercicio}}.\n# DAS PENDÊNCIAS\n{{n}}. Para a conclusão da análise, é necessária a verificação dos seguintes pontos:\n{{pendencias}}\n# DO ENCAMINHAMENTO\n{{n}}. Encaminhem-se os autos, por meio de ofício, para **{{destino}}**, nos termos do art. 28 do Decreto Municipal nº 1.410/2026, com retorno a este Departamento após a manifestação. {{destino_obs}}\n{{bloco:assinatura}}'
+};
+let mdRasc = null, mdAba = 'def';
+function mdStatus(){
+  $('modeloUso').value = modelos.usar ? 'meu' : 'auto';
+  const tem = Object.keys(MOD_L).filter(k => (modelos[k] || '').trim());
+  $('modeloStatus').textContent = modelos.usar
+    ? (tem.length ? `Usando seu modelo para: ${tem.map(k => MOD_L[k]).join(', ')}. Os demais resultados saem no formato automático.` : 'Nenhum modelo cadastrado ainda: o parecer sai no formato automático.')
+    : (tem.length ? `${tem.length} modelo(s) cadastrado(s), mas desativados.` : '');
+}
+function mdAbas(){
+  $('mdAbas').innerHTML = Object.entries(MOD_L).map(([k,l]) => `<button class="${k === mdAba ? '' : 'sec '}sm" data-mdaba="${k}">${esc(l)}${(mdRasc[k] || '').trim() ? ' ✓' : ''}</button>`).join('');
+  $('mdTexto').value = mdRasc[mdAba] || '';
+}
+function mdAbrir(){
+  mdRasc = {...modelos}; $('mdPrev').style.display = 'none';
+  const chip = (arr, pre) => arr.map(([k,l]) => `<button class="sec sm" data-mdins="{{${pre}${k}}}" title="${esc(l)}">${esc('{{' + pre + k + '}}')}</button>`).join('');
+  $('mdCampos').innerHTML = chip([['n','Numeração'], ...MOD_CAMPOS], ''); $('mdListas').innerHTML = chip(MOD_LISTAS, ''); $('mdBlocos').innerHTML = chip(MOD_BLOCOS, 'bloco:');
+  mdAbas(); $('modeloModal').style.display = 'flex';
+}
+$('btnModelos').onclick = mdAbrir;
+$('modeloUso').onchange = e => { modelos.usar = e.target.value === 'meu'; modSave(); mdStatus(); if (modelos.usar && !Object.keys(MOD_L).some(k => (modelos[k] || '').trim())) mdAbrir(); };
+$('mdTexto').oninput = e => { mdRasc[mdAba] = e.target.value; };
+$('mdCancelar').onclick = () => { $('modeloModal').style.display = 'none'; };
+$('mdSalvar').onclick = () => { mdRasc[mdAba] = $('mdTexto').value; Object.assign(modelos, mdRasc); if (Object.keys(MOD_L).some(k => (modelos[k] || '').trim())) modelos.usar = true; const ok = modSave(); $('modeloModal').style.display = 'none'; mdStatus(); if (!ok) alert('O navegador não permitiu guardar os modelos. Use “Baixar modelos” para não perdê-los.'); };
+$('mdExemplo').onclick = () => { if ($('mdTexto').value.trim() && !confirm('Substituir o texto deste modelo pelo exemplo?')) return; mdRasc[mdAba] = MOD_EX[mdAba]; mdAbas(); };
+$('mdLimpar').onclick = () => { if (!confirm(`Apagar o modelo de “${MOD_L[mdAba]}”? Esse resultado voltará a sair no formato automático.`)) return; mdRasc[mdAba] = ''; mdAbas(); };
+$('mdPrevia').onclick = () => {
+  const r = montarParecer(); const p = $('mdPrev'); p.style.display = '';
+  const txt = $('mdTexto').value.trim();
+  p.innerHTML = (r.key !== mdAba ? `<p class="alert">O processo atual resulta em “${esc(MOD_L[r.key] || DEC_L[r.dec])}”, não em “${esc(MOD_L[mdAba])}”: a prévia usa os dados atuais só para mostrar o formato.</p>` : '') + (txt ? aplicarModelo(txt, {...r, dec: mdAba === 'tri' ? 'indef' : mdAba}) : '<p class="base">Modelo vazio.</p>');
+};
+$('mdCarregar').onclick = () => $('mdFile').click();
+$('mdFile').onchange = async e => {
+  const f = e.target.files[0]; e.target.value = ''; if (!f) return;
+  try {
+    const txt = /\.docx$/i.test(f.name) ? await lerDocx(await f.arrayBuffer()) : await f.text();
+    if ($('mdTexto').value.trim() && !confirm('Substituir o texto deste modelo pelo conteúdo do arquivo?')) return;
+    mdRasc[mdAba] = txt; mdAbas();
+    alert('Arquivo carregado. Confira o texto: troque os dados do processo pelos campos (ex.: o nome do requerente por {{requerente}}) antes de salvar.');
+  } catch(err){ alert('Não foi possível ler o arquivo: ' + err.message); }
+};
+$('mdBaixar').onclick = () => { mdRasc[mdAba] = $('mdTexto').value; baixar('Modelos_Parecer_IPTU.json', JSON.stringify(mdRasc, null, 2), 'application/json'); };
+$('mdImportar').onclick = () => $('mdFileJson').click();
+$('mdFileJson').onchange = async e => {
+  const f = e.target.files[0]; e.target.value = ''; if (!f) return;
+  try { const j = JSON.parse((await f.text()).replace(/^\uFEFF/, '')); Object.keys(MOD_L).forEach(k => { if (typeof j[k] === 'string') mdRasc[k] = j[k]; }); mdAbas(); alert('Modelos importados. Clique em “Salvar e fechar” para usá-los.'); }
+  catch(err){ alert('Arquivo de modelos inválido.'); }
+};
+document.addEventListener('click', e => {
+  const t = e.target;
+  if (t.dataset && t.dataset.mdaba){ mdRasc[mdAba] = $('mdTexto').value; mdAba = t.dataset.mdaba; mdAbas(); }
+  if (t.dataset && t.dataset.mdins){ const ta = $('mdTexto'), a = ta.selectionStart, b = ta.selectionEnd; ta.value = ta.value.slice(0, a) + t.dataset.mdins + ta.value.slice(b); ta.focus(); ta.selectionStart = ta.selectionEnd = a + t.dataset.mdins.length; mdRasc[mdAba] = ta.value; }
+});
+mdStatus();
 $('btnPrint').onclick = () => { buildPrint(); window.print(); };
 $('btnCopiar').onclick = async () => { const t = $('parecer').innerText; try { await navigator.clipboard.writeText(t); alert('Texto copiado.'); } catch(e){ const r = document.createRange(); r.selectNodeContents($('parecer')); const sel = getSelection(); sel.removeAllRanges(); sel.addRange(r); document.execCommand('copy'); alert('Texto copiado.'); } };
 $('btnDoc').onclick = baixarDocx;
