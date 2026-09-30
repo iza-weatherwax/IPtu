@@ -149,9 +149,15 @@ aside ul{margin:4px 0 0;padding-left:18px;font-size:12.5px}
       <option value="">Automática (conforme sugestão)</option>
       <option value="def">Deferimento</option>
       <option value="indef">Indeferimento</option>
-      <option value="pend">Encaminhar para verificação (pendência)</option>
+      <option value="pend">Pendência – notificar o contribuinte / encaminhar</option>
     </select>
     <div id="destBox" class="sub" style="display:none">
+      <label style="font-size:12px;color:var(--mut)">Encaminhamento da pendência</label>
+      <select data-k="enc">
+        <option value="">Departamento de Protocolo – notificar o contribuinte (10 dias úteis)</option>
+        <option value="orgao">Outro órgão – consulta técnica (casos específicos)</option>
+      </select>
+      <div id="orgaoBox" style="display:none;margin-top:6px">
       <label style="font-size:12px;color:var(--mut)">Encaminhar, por ofício, para (órgão / departamento / ente)</label>
       <input data-k="destino" list="destLista" placeholder="Ex.: Secretaria Municipal de Saúde">
       <datalist id="destLista">
@@ -161,10 +167,12 @@ aside ul{margin:4px 0 0;padding-left:18px;font-size:12.5px}
         <option value="Instituto Nacional do Seguro Social (INSS)"></option>
         <option value="Setor de Cadastro Imobiliário"></option>
       </datalist>
-      <label style="font-size:12px;color:var(--mut);margin-top:6px;display:block">O que deve ser verificado (opcional – complementa as pendências listadas)</label>
-      <textarea data-k="destino_obj" placeholder="Ex.: manifestação técnica sobre o caráter permanente da condição"></textarea>
+      </div>
+      <label style="font-size:12px;color:var(--mut);margin-top:6px;display:block">Observação ao destinatário (opcional – complementa as pendências listadas)</label>
+      <textarea data-k="destino_obj" placeholder="Ex.: apresentar extrato de benefício atualizado"></textarea>
       <div id="destAviso"></div>
     </div>
+    <label class="chk" id="notifBox" style="display:none;margin-top:6px"><input type="checkbox" data-k="notif_nao"><span>O contribuinte já foi notificado e <b>não supriu</b> a documentação em 10 dias úteis (ou a apresentada é insuficiente): <b>indeferir</b></span></label>
     <div class="bar">
       <button id="btnGerar">Gerar parecer</button>
       <button class="sec" id="btnSalvar" title="Ctrl+S">Salvar processo</button>
@@ -582,15 +590,19 @@ function coletar(){
   if (num(s.exercicio) === 2026 && s.t_ini==='sim' && s.t_doc==='nao') aviso.push('Art. 34, §3º: documentos posteriores a 01/01/2026 não permitem concluir que a situação já existia.');
   if (s.c_pne && s.pn_perm==='temp') aviso.push('Condição temporária não se enquadra (art. 10, §5º).');
   if (s.tipo==='renov') aviso.push('Renovação: confirmar documentação atualizada (art. 32, §2º).');
+  if (s.notif_nao && pend.length) nao.push('Documentação pendente não suprida após notificação do requerente (Decreto, art. 29, § 2º) – requisitos não comprovados (art. 4º, VII e § 1º)');
   return {nao, pend, aviso};
 }
+const encOrgao = () => s.enc === 'orgao';
+const destinoTxt = () => encOrgao() ? (s.destino || '').trim() : 'Departamento de Protocolo';
+const notifIndef = c => !!s.notif_nao && c.pend.length > 0;
 function autoDecisao(c){
   if (c.nao.length) return 'indef';
   if (c.pend.length) return 'pend';
   if (c.aviso.some(a => a.startsWith('Triagem') || a.startsWith('Não conferido') || a.startsWith('Requisito') || a.startsWith('Art. 34: não'))) return 'incompleta';
   return 'def';
 }
-const DEC_L = {def:'Deferimento', indef:'Indeferimento', pend:'Encaminhar para verificação (pendência)', incompleta:'Análise incompleta'};
+const DEC_L = {def:'Deferimento', indef:'Indeferimento', pend:'Pendência – notificar o contribuinte (Protocolo)', incompleta:'Análise incompleta'};
 
 /* ============ atualização da tela ============ */
 function badge(id){ const e = eff(id); const sug = SUG[id]();
@@ -637,10 +649,11 @@ function recalc(){
   const c = coletar(); const a = autoDecisao(c);
   $('sugestao').textContent = DEC_L[a];
   $('sugestao').style.color = {def:'var(--ok)', indef:'var(--nao)', pend:'var(--pend)', incompleta:'var(--na)'}[a];
-  $('sugestaoNota').textContent = ind ? 'Triagem: contribuinte fora das hipóteses do art. 113 – indeferimento automático.' : {def:'Todos os requisitos marcados como atendidos e sem pendências.', indef:'Há requisito não atendido.', pend:'Nenhum impeditivo, mas há documentos ou informações pendentes: o processo não volta ao contribuinte, é encaminhado por ofício ao órgão indicado para verificação.', incompleta:'Há itens ainda não conferidos ou analisados.'}[a];
+  $('sugestaoNota').textContent = ind ? 'Triagem: contribuinte fora das hipóteses do art. 113 – indeferimento automático.' : {def:'Todos os requisitos marcados como atendidos e sem pendências.', indef:'Há requisito não atendido.', pend:'Nenhum impeditivo, mas há documentos ou informações pendentes: o processo vai ao Departamento de Protocolo para notificar o contribuinte a supri-los em 10 dias úteis. Em casos específicos, pode ir a outro órgão.', incompleta:'Há itens ainda não conferidos ou analisados.'}[a];
   const decEf = ind ? 'indef' : (s.decisao || a);
-  show('destBox', decEf === 'pend');
-  $('destAviso').innerHTML = decEf === 'pend' && !(s.destino || '').trim() ? `<div class="alert">Informe para onde o processo será encaminhado.</div>` : '';
+  show('destBox', decEf === 'pend'); show('orgaoBox', encOrgao());
+  show('notifBox', !ind && (c.pend.length > 0 || s.notif_nao));
+  $('destAviso').innerHTML = decEf === 'pend' && encOrgao() && !(s.destino || '').trim() ? `<div class="alert">Informe para qual órgão o processo será encaminhado.</div>` : '';
   $('lstNao').innerHTML = li(c.nao); $('lstPend').innerHTML = li(c.pend); $('lstAviso').innerHTML = li(c.aviso);
 }
 
@@ -691,7 +704,7 @@ function montarParecer(){
   let h = '';
 
   /* ementa */
-  h += HD(`Isenção de IPTU.${renov ? ' Renovação.' : ''} Art. 113 da LC nº 203/2022. Decreto Municipal nº 1.410/2026.${dec === 'pend' ? ' Encaminhamento para verificação.' : ''}`);
+  h += HD(`Isenção de IPTU.${renov ? ' Renovação.' : ''} Art. 113 da LC nº 203/2022. Decreto Municipal nº 1.410/2026.${dec === 'pend' ? (encOrgao() ? ' Encaminhamento para verificação.' : ' Notificação para complementação de documentos.') : ''}`);
 
   /* objeto */
   h += HD('DO OBJETO');
@@ -737,6 +750,8 @@ function montarParecer(){
     h += N(`${t}${s.t_doc==='sim' ? ' Os documentos emitidos após essa data permitem concluir que a situação já existia (Decreto, art. 34, §§ 2º e 3º).' : s.t_doc==='nao' ? ' Os documentos emitidos após essa data <b>não</b> permitem concluir que a situação já existia (Decreto, art. 34, § 3º).' : ''}${s.t_pago==='sim' ? ' Consta pagamento, total ou parcial, do IPTU/2026, o que não impede a análise (Decreto, art. 34, § 5º).' : ''}`);
   }
 
+  if (notifIndef(c)) h += N('O requerente foi notificado, por meio do Departamento de Protocolo, para suprir a documentação pendente no prazo de 10 (dez) dias úteis (Decreto, art. 29, § 2º), não tendo apresentado documentação suficiente.');
+
   /* fundamentação */
   h += HD('DA FUNDAMENTAÇÃO JURÍDICA');
   h += N('O pleito encontra amparo no artigo 113 da Lei Complementar nº 203/2022, que isenta do IPTU os imóveis utilizados unicamente para fins residenciais, considerados de uso unifamiliar, edificados, de um mesmo proprietário que seja aposentado ou pensionista ou que tenham como morador portador de necessidades especiais permanentes, que não possua outra propriedade e que não tenham renda familiar somada maior que 1,5 (um inteiro e meio) salários-mínimos, devidamente comprovada junto à Administração Tributária Municipal.');
@@ -754,10 +769,13 @@ function montarParecer(){
   todos.forEach((t,i) => h += BL(t + (i === todos.length - 1 ? '.' : ';')));
   if (dec === 'def') h += N('Dessa forma, restam preenchidos os pressupostos legais para o reconhecimento da isenção pleiteada.');
   else if (dec === 'indef') h += N('Dessa forma, não restam preenchidos os pressupostos legais para o reconhecimento da isenção pleiteada, uma vez que a ausência de qualquer requisito impede o seu reconhecimento (Decreto, art. 4º, § 1º).');
-  else if (dec === 'pend') h += N('Dessa forma, antes de qualquer conclusão quanto ao deferimento ou indeferimento do pedido, faz-se necessária a verificação das pendências acima indicadas junto ao órgão competente.');
+  else if (dec === 'pend') h += N(encOrgao() ? 'Dessa forma, antes de qualquer conclusão quanto ao deferimento ou indeferimento do pedido, faz-se necessária a verificação das pendências acima indicadas junto ao órgão competente.' : 'Dessa forma, antes de qualquer conclusão quanto ao deferimento ou indeferimento do pedido, faz-se necessária a complementação da documentação pelo requerente, quanto às pendências acima indicadas.');
   else h += N(semInfo('análise ainda incompleta.'));
 
   /* conclusão */
+  const pendTxt = c.pend.map(x => esc(x).replace(/\((arts?\.)/g, '(Decreto, $1').replace(/§(\d)/g, '§ $1'));
+  const motivos = REQ.filter(r => eff(r.id) === 'nao').map(r => `não atendido o requisito do inciso ${r.n} do art. 4º do Decreto Municipal nº 1.410/2026 (${esc(lc(r.t))})${s['obs_'+r.id] ? ': ' + esc(s['obs_'+r.id]) : ''}`);
+  if (notifIndef(c)) motivos.push(`não suprida a documentação pendente, apesar de notificado o requerente para fazê-lo no prazo de 10 (dez) dias úteis (Decreto, art. 29, § 2º), restando não comprovados os requisitos legais (Decreto, art. 4º, VII e § 1º) – pendências: ${pendTxt.join('; ')}`);
   h += HD('DA CONCLUSÃO');
   if (dec === 'def'){
     h += N(`Ante o exposto, <b>defere-se</b> o reconhecimento da isenção do IPTU prevista no artigo 113 da Lei Complementar nº 203/2022, considerando o cumprimento dos requisitos legais e regulamentares, especialmente aqueles estabelecidos pelo Decreto Municipal nº 1.410/2026, com eficácia a partir do exercício de <b>${exi ? exi : '<mark>[PREENCHER]</mark>'}</b>, em caráter precário e pelo prazo determinado de 4 (quatro) anos, contado a partir do exercício para o qual a isenção for deferida (LC nº 203/2022, art. 113, § 3º; Decreto, art. 32, caput e § 1º).`);
@@ -765,9 +783,11 @@ function montarParecer(){
     h += N('O beneficiário deverá comunicar à Administração Tributária Municipal, no prazo de 30 (trinta) dias, qualquer alteração que possa interferir na manutenção da isenção (Decreto, art. 33, § 1º).');
   } else if (dec === 'indef'){
     h += N('Ante o exposto, <b>indefere-se</b> o pedido de reconhecimento da isenção do IPTU prevista no artigo 113 da Lei Complementar nº 203/2022, pelos seguintes motivos:');
-    const nao = REQ.filter(r => eff(r.id) === 'nao');
-    if (!nao.length) h += BL(semInfo('indicar o motivo do indeferimento (nenhum requisito foi marcado como não atendido).'));
-    nao.forEach((r,i) => h += BL(`não atendido o requisito do inciso ${r.n} do art. 4º do Decreto Municipal nº 1.410/2026 (${esc(lc(r.t))})${s['obs_'+r.id] ? ': ' + esc(s['obs_'+r.id]) : ''}${i === nao.length - 1 ? '.' : ';'}`));
+    if (!motivos.length) h += BL(semInfo('indicar o motivo do indeferimento (nenhum requisito foi marcado como não atendido).'));
+    motivos.forEach((x,i) => h += BL(x + (i === motivos.length - 1 ? '.' : ';')));
+  } else if (dec === 'pend' && !encOrgao()){
+    h += N(`Ante o exposto, deixa-se, por ora, de decidir pelo deferimento ou pelo indeferimento do pedido, determinando-se o encaminhamento dos autos ao <b>Departamento de Protocolo</b>, para que notifique o requerente a suprir as pendências indicadas no prazo de 10 (dez) dias úteis, nos termos do artigo 29, § 2º, do Decreto Municipal nº 1.410/2026${s.destino_obj ? ', observando-se: ' + esc(s.destino_obj) : ''}.`);
+    h += N('Decorrido o prazo, os autos deverão retornar a este Departamento para decisão. Não suprida a documentação, ou sendo ela insuficiente, o pedido será indeferido, por ausência de comprovação dos requisitos legais (Decreto, art. 4º, VII e § 1º).');
   } else if (dec === 'pend'){
     h += N(`Ante o exposto, deixa-se, por ora, de decidir pelo deferimento ou pelo indeferimento do pedido, determinando-se o encaminhamento dos autos, por meio de ofício, para <b>${ph((s.destino || '').trim())}</b>, nos termos do artigo 28 do Decreto Municipal nº 1.410/2026, a fim de que verifique e se manifeste sobre as pendências indicadas${s.destino_obj ? ', especialmente: ' + esc(s.destino_obj) : ''}.`);
     h += N('Após a resposta, os autos deverão retornar a este Departamento para conclusão da análise e decisão.');
@@ -776,13 +796,15 @@ function montarParecer(){
   }
 
   /* encaminhamento */
-  if (dec === 'pend'){
+  if (dec === 'pend' && !encOrgao()){
+    h += HD('DO ENCAMINHAMENTO');
+    h += N('Encaminhem-se os autos ao Departamento de Protocolo para notificação do requerente, com retorno a este Departamento de Fiscalização após o decurso do prazo de 10 (dez) dias úteis.');
+  } else if (dec === 'pend'){
     h += HD('DO ENCAMINHAMENTO');
     h += N(`Oficie-se, com cópia das peças necessárias, para ${ph((s.destino || '').trim())}, solicitando a verificação dos pontos acima, com retorno dos autos a este Departamento de Fiscalização após a manifestação.`);
   } else if (dec === 'indef'){
     h += N('Fica ressalvado ao requerente o direito de impugnação ou recurso, nos termos da Lei Complementar nº 203, de 2022 (Decreto, art. 38).');
   }
-  const motivos = REQ.filter(r => eff(r.id) === 'nao').map(r => `não atendido o requisito do inciso ${r.n} do art. 4º do Decreto Municipal nº 1.410/2026 (${esc(lc(r.t))})${s['obs_'+r.id] ? ': ' + esc(s['obs_'+r.id]) : ''}`);
   return {h, dec, key:dec, ctx:{pres:pres.map(esc), aus:aus.map(esc), itens, pends, motivos}};
 }
 const assinatura = () => `<p class="c">Araguari/MG, ${new Date().toLocaleDateString('pt-BR')}.</p><p class="c">${ph(s.fiscal)}</p><p class="c">Matrícula: ${ph(s.matricula)}</p>`;
@@ -797,7 +819,7 @@ function gerarParecer(){
 
 /* ============ modelos próprios de parecer ============ */
 const MOD_KEY = 'iptuModelos';
-const MOD_L = {def:'Deferimento', indef:'Indeferimento', pend:'Encaminhamento (pendência)', tri:'Indeferimento na triagem'};
+const MOD_L = {def:'Deferimento', indef:'Indeferimento', pend:'Pendência (notificação ou consulta)', tri:'Indeferimento na triagem'};
 let modelos = {usar:false, def:'', indef:'', pend:'', tri:''};
 try { Object.assign(modelos, JSON.parse(localStorage.getItem(MOD_KEY) || '{}')); } catch(e){}
 const modSave = () => { try { localStorage.setItem(MOD_KEY, JSON.stringify(modelos)); return true; } catch(e){ return false; } };
@@ -807,7 +829,7 @@ const MOD_CAMPOS = [
   ['requerente','Requerente'],['cpf','CPF'],['inscricao','Inscrição imobiliária'],['cci','CCI'],['endereco','Endereço do imóvel'],['condicao','Condição do requerente'],
   ['hipotese','Hipótese do art. 113 (triagem)'],['resultado','Resultado (Deferimento, Indeferimento…)'],['exercicio_inicial','Exercício inicial de eficácia'],
   ['renda_total','Renda familiar computada'],['limite_renda','Limite de 1,5 salário-mínimo'],['salario_minimo','Salário-mínimo'],
-  ['destino','Órgão de destino (pendência)'],['destino_obs','O que verificar (pendência)'],['obs_triagem','Observação da triagem'],
+  ['destino','Destino da pendência (Protocolo ou órgão)'],['destino_obs','Observação ao destinatário (pendência)'],['obs_triagem','Observação da triagem'],
   ['fiscal','Fiscal'],['matricula','Matrícula'],['data','Data de hoje']
 ];
 const MOD_LISTAS = [['motivos','Motivos do indeferimento'],['pendencias','Pendências'],['requisitos','Situação de cada requisito'],['documentos_apresentados','Documentos apresentados'],['documentos_ausentes','Documentos ausentes']];
@@ -829,9 +851,9 @@ function camposModelo(r){
   return {
     numero:ph(s.numero), protocolo:ph(dbr(s.protocolo)), tipo_pedido:s.tipo==='renov' ? 'renovação' : 'primeira vez', exercicio:ph(s.exercicio),
     requerente:ph(s.requerente), cpf:ph(s.cpf), inscricao:ph(s.inscricao), cci:ph(s.cci), endereco:ph(s.endereco), condicao:ph(cond),
-    hipotese:esc(condArt113()), resultado:{def:'Deferimento', indef:'Indeferimento', pend:'Encaminhamento para verificação'}[r.dec] || ph(''),
+    hipotese:esc(condArt113()), resultado:{def:'Deferimento', indef:'Indeferimento', pend:encOrgao() ? 'Encaminhamento para verificação' : 'Notificação para complementação de documentos'}[r.dec] || ph(''),
     exercicio_inicial:ph(ex ? String(ex) : ''), renda_total:brl(rd.total), limite_renda:rd.lim ? brl(rd.lim) : ph(''), salario_minimo:rd.sm > 0 ? brl(rd.sm) : ph(''),
-    destino:ph((s.destino || '').trim()), destino_obs:esc(s.destino_obj || ''), obs_triagem:esc(s.obs_tri || ''),
+    destino:ph(destinoTxt()), destino_obs:esc(s.destino_obj || ''), obs_triagem:esc(s.obs_tri || ''),
     fiscal:ph(s.fiscal), matricula:ph(s.matricula), data:new Date().toLocaleDateString('pt-BR')
   };
 }
@@ -1017,7 +1039,7 @@ function condArt113(){
   const x = []; if (s.c_apos) x.push('Aposentado'); if (s.c_pens) x.push('Pensionista'); if (s.c_pne) x.push('Morador com necessidades especiais permanentes');
   return x.length ? x.join(' + ') : 'Não informada';
 }
-const RES_L = {def:'Deferido', indef:'Indeferido', pend:'Encaminhado para verificação', incompleta:'Sem conclusão'};
+const RES_L = {def:'Deferido', indef:'Indeferido', pend:'Pendência', incompleta:'Sem conclusão'};
 let reg = [];
 try { reg = JSON.parse(localStorage.getItem(REG_KEY) || '[]'); } catch(e){ reg = []; }
 const regKey = n => String(n).trim().toLowerCase();
@@ -1033,7 +1055,7 @@ function registrarProcesso(dec){
   parecerGerado = true;
   const n = (s.numero || '').trim();
   if (!n){ regMsg('Parecer gerado, mas NÃO salvo nem registrado: informe o nº do processo (item 1) e gere novamente.', true); return; }
-  curRec = {ts:new Date().toISOString(), numero:n, requerente:s.requerente||'', inscricao:s.inscricao||'', cci:s.cci||'', fiscal:s.fiscal||'', cond:condArt113(), resultado:RES_L[dec] + (dec === 'pend' && (s.destino || '').trim() ? ' – ' + s.destino.trim() : ''), tipo:s.tipo==='renov' ? 'Renovação' : 'Primeira vez'};
+  curRec = {ts:new Date().toISOString(), numero:n, requerente:s.requerente||'', inscricao:s.inscricao||'', cci:s.cci||'', fiscal:s.fiscal||'', cond:condArt113(), resultado:dec === 'pend' ? (encOrgao() ? 'Encaminhado para verificação' + ((s.destino || '').trim() ? ' – ' + s.destino.trim() : '') : 'Pendência – contribuinte notificado via Protocolo') : RES_L[dec], tipo:s.tipo==='renov' ? 'Renovação' : 'Primeira vez'};
   if (dirH){ salvarProcesso({registro:true}); return; }
   const i = reg.findIndex(r => regKey(r.numero) === regKey(n));
   if (i >= 0) reg[i] = curRec; else reg.push(curRec);
@@ -1232,7 +1254,7 @@ const MOD_EX = {
   tri: '# Isenção de IPTU. Art. 113 da LC nº 203/2022. Decreto Municipal nº 1.410/2026. Não enquadramento.\n# DO OBJETO\n{{n}}. Trata-se de pedido de isenção de IPTU formulado por {{requerente}} (CPF {{cpf}}), relativo ao imóvel de inscrição imobiliária nº {{inscricao}}, situado em {{endereco}}, para o exercício de {{exercicio}}.\n# DA ANÁLISE\n{{n}}. Verificou-se que o proprietário não é aposentado nem pensionista e que o imóvel não tem como morador pessoa com necessidades especiais permanentes. {{obs_triagem}}\n# DA CONCLUSÃO\n{{n}}. Ante o exposto, **indefere-se** o pedido, por:\n{{motivos}}\n{{n}}. Fica ressalvado ao requerente o direito de impugnação ou recurso, nos termos da Lei Complementar nº 203, de 2022 (Decreto, art. 38).\n{{bloco:assinatura}}',
   def: '{{bloco:ementa}}\n# DO OBJETO\n{{n}}. Trata-se de pedido de isenção de IPTU formulado por {{requerente}} (CPF {{cpf}}), relativo ao imóvel de inscrição imobiliária nº {{inscricao}}, situado em {{endereco}}, para o exercício de {{exercicio}}.\n# DOS FATOS\n{{bloco:fatos}}\n# DA ANÁLISE\n{{n}}. Da análise dos requisitos do art. 4º do Decreto Municipal nº 1.410/2026, verificou-se:\n{{requisitos}}\n# DA CONCLUSÃO\n{{n}}. Ante o exposto, **defere-se** o reconhecimento da isenção do IPTU, com eficácia a partir do exercício de **{{exercicio_inicial}}**, pelo prazo de 4 (quatro) anos (Decreto, art. 32).\n{{bloco:assinatura}}',
   indef: '{{bloco:ementa}}\n# DO OBJETO\n{{n}}. Trata-se de pedido de isenção de IPTU formulado por {{requerente}} (CPF {{cpf}}), relativo ao imóvel de inscrição imobiliária nº {{inscricao}}, situado em {{endereco}}, para o exercício de {{exercicio}}.\n# DOS FATOS\n{{bloco:fatos}}\n# DA ANÁLISE\n{{n}}. Da análise dos requisitos do art. 4º do Decreto Municipal nº 1.410/2026, verificou-se:\n{{requisitos}}\n# DA CONCLUSÃO\n{{n}}. Ante o exposto, **indefere-se** o pedido, pelos seguintes motivos:\n{{motivos}}\n{{n}}. Fica ressalvado ao requerente o direito de impugnação ou recurso, nos termos da Lei Complementar nº 203, de 2022 (Decreto, art. 38).\n{{bloco:assinatura}}',
-  pend: '{{bloco:ementa}}\n# DO OBJETO\n{{n}}. Trata-se de pedido de isenção de IPTU formulado por {{requerente}} (CPF {{cpf}}), relativo ao imóvel de inscrição imobiliária nº {{inscricao}}, situado em {{endereco}}, para o exercício de {{exercicio}}.\n# DAS PENDÊNCIAS\n{{n}}. Para a conclusão da análise, é necessária a verificação dos seguintes pontos:\n{{pendencias}}\n# DO ENCAMINHAMENTO\n{{n}}. Encaminhem-se os autos, por meio de ofício, para **{{destino}}**, nos termos do art. 28 do Decreto Municipal nº 1.410/2026, com retorno a este Departamento após a manifestação. {{destino_obs}}\n{{bloco:assinatura}}'
+  pend: '{{bloco:ementa}}\n# DO OBJETO\n{{n}}. Trata-se de pedido de isenção de IPTU formulado por {{requerente}} (CPF {{cpf}}), relativo ao imóvel de inscrição imobiliária nº {{inscricao}}, situado em {{endereco}}, para o exercício de {{exercicio}}.\n# DAS PENDÊNCIAS\n{{n}}. Para a conclusão da análise, é necessária a complementação dos seguintes pontos:\n{{pendencias}}\n# DO ENCAMINHAMENTO\n{{n}}. Encaminhem-se os autos ao **{{destino}}**, para que notifique o requerente a suprir as pendências no prazo de 10 (dez) dias úteis (Decreto, art. 29, § 2º), com retorno a este Departamento após o prazo. Não suprida a documentação, ou sendo ela insuficiente, o pedido será indeferido (Decreto, art. 4º, VII e § 1º). {{destino_obs}}\n{{bloco:assinatura}}'
 };
 let mdRasc = null, mdAba = 'def';
 function mdStatus(){
