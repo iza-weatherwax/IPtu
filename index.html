@@ -419,6 +419,7 @@ function build(){
   ${R('O laudo/avaliação conclui pelo impedimento de longo prazo ou condição permanente/duradoura (referência: efeitos por no mínimo 2 anos – art. 10, §2º)?', S('pn_perm',[['','Não analisado'],['sim','Sim, conclusivo'],['inconc','Não conclusivo / insuficiente'],['temp','Condição temporária ou passageira (art. 10, §5º)']]))}
   <b style="display:block;margin-top:6px">Substitutivos ou complementares, quando com elementos técnicos suficientes (art. 21, III, “b”)</b>`;
   DOC_PNE_SUBST.forEach((l,i) => h += C('ps_'+i,l));
+  h += C('pn_aux','Apresentado auxílio por incapacidade temporária (antigo auxílio-doença) como prova da condição <small>(não gera presunção de deficiência – art. 10, §§ 1º, 2º e 5º)</small>');
   h += `${C('pn_saude','Encaminhado à Secretaria Municipal de Saúde para manifestação técnica (art. 10, §6º)')}
   <p class="base">Relatório do CRAS/Desenvolvimento Social (art. 22, parágrafo único) não substitui a avaliação médica ou multiprofissional.</p></div>
   ${obs('r4')}</div>`;
@@ -547,6 +548,7 @@ function pendReq(id){
       if (!s.pn_laudo) p.push('Laudo médico, relatório multiprofissional ou documento técnico equivalente (art. 21, III, “a”, 1)');
       if (s.pn_id !== 'ok') p.push('Documento de identificação da pessoa com necessidades especiais (art. 21, III, “a”, 2)');
       if (s.pn_res !== 'ok') p.push('Comprovação de residência efetiva no imóvel (art. 21, III, “a”, 3)');
+      if (s.pn_aux && !(s.pn_laudo && s.pn_perm === 'sim')) p.push('Auxílio por incapacidade temporária não comprova, por si só, impedimento de longo prazo: apresentar laudo médico ou relatório multiprofissional (art. 10, §§ 2º e 5º)');
       if (s.pn_perm !== 'sim' && s.pn_perm !== 'temp') p.push('Laudo não conclusivo quanto ao caráter permanente ou duradouro – avaliar manifestação da Secretaria Municipal de Saúde (art. 10, §6º)');
     }
     if (!s.c_nenhuma && !s.c_apos && !s.c_pens && !s.c_pne) p.push('Hipótese do inciso IV não indicada (aposentado, pensionista ou morador com necessidades especiais permanentes)');
@@ -629,6 +631,7 @@ function recalc(){
   if (s.hab==='nao') al.r3 += `<div class="alert red">Construção sem condições de uso é considerada não edificada (LC art. 96, par. único; Decreto art. 7º, §2º).</div>`;
   if (s.r3_peq) al.r3 += `<div class="alert">Art. 7º, §3º: pequena construção/abrigo/depósito/edícula sem uso residencial efetivo não caracteriza, por si só, imóvel edificado de uso residencial unifamiliar.</div>`;
   if (s.r1_ativ==='mei') al.r1 = `<div class="alert">Art. 14: a atividade de MEI só é admitida se todos os requisitos do art. 113 estiverem atendidos, inclusive a renda familiar.</div>`;
+  if (s.c_pne && s.pn_aux) al.r4 = `<div class="alert">Auxílio por incapacidade temporária (ainda que recebido por mais de 2 anos) não gera presunção de deficiência: a condição deve ser comprovada por avaliação médica ou multiprofissional (art. 10, §§ 1º, 2º e 5º). O fato e a fundamentação entram automaticamente no parecer.</div>`;
   if (s.c_pne && s.pn_perm==='temp') al.r4 = `<div class="alert red">Doença temporária, convalescença ou limitação passageira não se enquadram (art. 10, §5º).</div>`;
   if (s.condicao && s.condicao!=='prop') al.proc = `<div class="alert">Requerente não é proprietário. O art. 113 da LC 203/2022 fala em imóvel “de um mesmo proprietário”; o Decreto (art. 20, I, “f”) aceita termo de posse e cessão como prova da relação com o imóvel. Decisão do fiscal.</div>`;
   const rd = renda();
@@ -718,6 +721,8 @@ function montarParecer(){
   const imv = [det.r1(), det.r2(), det.r3()].filter(x => x);
   h += N(`Quanto ao imóvel: ${imv.length ? imv.map((x,i) => (i ? lc(x) : x)).join('; ') + '.' : semInfo('uso, ocupação e edificação não informados.')}`);
   h += N(`Quanto à condição prevista no inciso IV do art. 4º do Decreto: ${det.r4() ? det.r4() + '.' : semInfo('hipótese não indicada.')}`);
+  const auxPne = s.c_pne && s.pn_aux;
+  if (auxPne) h += N(`Para comprovar a condição de morador com necessidades especiais permanentes, foi apresentado comprovante de recebimento de auxílio por incapacidade temporária (antigo auxílio-doença)${s.pn_laudo && s.pn_perm === 'sim' ? '' : ', sem laudo médico ou relatório multiprofissional que ateste impedimento de longo prazo'}.`);
   h += N(`Quanto à inexistência de outra propriedade, domínio útil ou posse tributável pelo IPTU (Decreto, art. 4º, V, e art. 12): ${det.r5() ? det.r5() + '.' : semInfo('não informado.')}`);
   /* renda: o texto acompanha a situação efetiva do requisito VI (inclusive a escolha do fiscal) e os campos em branco */
   const e6 = eff('r6'), o6 = s.obs_r6 ? esc(s.obs_r6) : '';
@@ -756,6 +761,7 @@ function montarParecer(){
   h += HD('DA FUNDAMENTAÇÃO JURÍDICA');
   h += N('O pleito encontra amparo no artigo 113 da Lei Complementar nº 203/2022, que isenta do IPTU os imóveis utilizados unicamente para fins residenciais, considerados de uso unifamiliar, edificados, de um mesmo proprietário que seja aposentado ou pensionista ou que tenham como morador portador de necessidades especiais permanentes, que não possua outra propriedade e que não tenham renda familiar somada maior que 1,5 (um inteiro e meio) salários-mínimos, devidamente comprovada junto à Administração Tributária Municipal.');
   h += N('O Decreto Municipal nº 1.410/2026 regulamenta a matéria e estabelece, em seu artigo 4º, que os requisitos são cumulativos, de modo que a ausência de qualquer deles impede o reconhecimento da isenção (§ 1º). A isenção é efetivada, em cada caso, por despacho da autoridade administrativa, mediante requerimento instruído com prova do preenchimento das condições legais (LC nº 203/2022, art. 446; Decreto, art. 2º, § 2º), e tem caráter precário e prazo determinado de 4 (quatro) anos, podendo ser renovada (LC nº 203/2022, art. 113, § 3º; Decreto, art. 32).');
+  if (auxPne) h += N('O recebimento de auxílio por incapacidade temporária (antigo auxílio-doença), ainda que por período superior a 2 (dois) anos, não gera presunção de deficiência. O benefício pressupõe incapacidade para o trabalho, de natureza temporária, ao passo que o artigo 10 do Decreto Municipal nº 1.410/2026 exige impedimento de longo prazo ou condição permanente ou duradoura, conceito interpretado em conformidade com a Lei Federal nº 13.146/2015 (art. 10, § 1º), que considera a interação do impedimento com uma ou mais barreiras capazes de obstruir a participação plena e efetiva da pessoa na sociedade, em igualdade de condições com as demais. Além disso, a condição deve ser comprovada por avaliação médica ou multiprofissional (art. 10, § 2º), e não se enquadram doenças temporárias, afastamentos transitórios ou situações incapacitantes sem indicação de permanência ou longa duração (art. 10, § 5º).');
   if (s.r1_ativ === 'mei') h += N('O § 1º do artigo 113 da Lei Complementar nº 203/2022 e o artigo 14 do Decreto admitem a isenção de imóvel utilizado também para atividade de microempreendedor individual, desde que atendidos os requisitos do caput do artigo 113 e as condições do referido artigo 14.');
   if (s.condicao && s.condicao !== 'prop') h += N('Registra-se que o requerente não figura como proprietário do imóvel, ao passo que o caput do artigo 113 da Lei Complementar nº 203/2022 refere-se a imóvel “de um mesmo proprietário”, circunstância que fica submetida à apreciação da autoridade competente.');
   if (ex === 2026) h += N('Tratando-se de pedido relativo ao exercício de 2026, aplica-se o artigo 34 do Decreto, segundo o qual a isenção produz efeitos sobre o IPTU de 2026 quando comprovado que todos os requisitos já estavam preenchidos em 1º de janeiro de 2026 (§ 1º); se surgiram somente depois, o reconhecimento alcança apenas o exercício subsequente (§ 4º).');
