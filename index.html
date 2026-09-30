@@ -173,7 +173,7 @@ aside ul{margin:4px 0 0;padding-left:18px;font-size:12.5px}
       <textarea data-k="destino_obj" placeholder="Ex.: apresentar extrato de benefício atualizado"></textarea>
       <div id="destAviso"></div>
     </div>
-    <label class="chk" id="notifBox" style="display:none;margin-top:6px"><input type="checkbox" data-k="notif_nao"><span>O contribuinte já foi notificado e <b>não supriu</b> a documentação em 10 dias úteis (ou a apresentada é insuficiente): <b>arquivar</b> (se algum requisito estiver marcado como não atendido, prevalece o indeferimento)</span></label>
+    <label class="chk" id="notifBox" style="display:none;margin-top:6px"><input type="checkbox" data-k="notif_nao"><span>O contribuinte já foi notificado e <b>não supriu</b> a documentação em 10 dias úteis (ou a apresentada é insuficiente): <b>arquivar</b></span></label>
     <div class="bar">
       <button id="btnGerar">Gerar parecer</button>
       <button class="sec" id="btnSalvar" title="Ctrl+S">Salvar processo</button>
@@ -649,12 +649,12 @@ function recalc(){
   const c = coletar(); const a = autoDecisao(c);
   $('sugestao').textContent = DEC_L[a];
   $('sugestao').style.color = {def:'var(--ok)', indef:'var(--nao)', pend:'var(--pend)', arq:'var(--pend)', incompleta:'var(--na)'}[a];
-  $('sugestaoNota').textContent = ind ? 'Triagem: contribuinte fora das hipóteses do art. 113 – indeferimento automático.' : {arq:'Contribuinte notificado não supriu a documentação: arquivamento, sem prejuízo de novo protocolo (Decreto, art. 29, § 3º).', def:'Todos os requisitos marcados como atendidos e sem pendências.', indef:'Há requisito não atendido.', pend:'Nenhum impeditivo, mas há documentos ou informações pendentes: o processo vai ao Departamento de Protocolo para notificar o contribuinte a supri-los em 10 dias úteis. Em casos específicos, pode ir a outro órgão.', incompleta:'Há itens ainda não conferidos ou analisados.'}[a];
+  $('sugestaoNota').textContent = ind ? 'Triagem: contribuinte fora das hipóteses do art. 113 – indeferimento automático.' : {arq:'Contribuinte notificado não supriu a documentação: arquivamento, sem prejuízo de novo protocolo (Decreto, art. 29, § 3º).', def:'Todos os requisitos marcados como atendidos e sem pendências.', indef:'Há requisito não atendido: indeferimento direto, sem notificação de pendências.', pend:'Nenhum impeditivo, mas há documentos ou informações pendentes: o processo vai ao Departamento de Protocolo para notificar o contribuinte a supri-los em 10 dias úteis. Em casos específicos, pode ir a outro órgão.', incompleta:'Há itens ainda não conferidos ou analisados.'}[a];
   const decEf = ind ? 'indef' : (s.decisao || a);
   show('destBox', decEf === 'pend'); show('orgaoBox', encOrgao());
-  show('notifBox', !ind && (c.pend.length > 0 || s.notif_nao));
+  show('notifBox', !ind && !c.nao.length && (c.pend.length > 0 || s.notif_nao));
   $('destAviso').innerHTML = decEf === 'pend' && encOrgao() && !(s.destino || '').trim() ? `<div class="alert">Informe para qual órgão o processo será encaminhado.</div>` : '';
-  $('lstNao').innerHTML = li(c.nao); $('lstPend').innerHTML = li(c.pend); $('lstAviso').innerHTML = li(c.aviso);
+  $('lstNao').innerHTML = li(c.nao); $('lstPend').innerHTML = c.nao.length && c.pend.length ? `<li><i>Sem notificação: há impeditivo, o pedido é indeferido diretamente. Itens apenas para registro:</i></li>` + li(c.pend) : li(c.pend); $('lstAviso').innerHTML = li(c.aviso);
 }
 
 /* ============ parecer ============ */
@@ -750,7 +750,7 @@ function montarParecer(){
     h += N(`${t}${s.t_doc==='sim' ? ' Os documentos emitidos após essa data permitem concluir que a situação já existia (Decreto, art. 34, §§ 2º e 3º).' : s.t_doc==='nao' ? ' Os documentos emitidos após essa data <b>não</b> permitem concluir que a situação já existia (Decreto, art. 34, § 3º).' : ''}${s.t_pago==='sim' ? ' Consta pagamento, total ou parcial, do IPTU/2026, o que não impede a análise (Decreto, art. 34, § 5º).' : ''}`);
   }
 
-  if (notifArq(c)) h += N('O requerente foi notificado, por meio do Departamento de Protocolo, para suprir a documentação pendente no prazo de 10 (dez) dias úteis (Decreto, art. 29, § 2º), não tendo apresentado documentação suficiente.');
+  if (dec === 'arq' && notifArq(c)) h += N('O requerente foi notificado, por meio do Departamento de Protocolo, para suprir a documentação pendente no prazo de 10 (dez) dias úteis (Decreto, art. 29, § 2º), não tendo apresentado documentação suficiente.');
 
   /* fundamentação */
   h += HD('DA FUNDAMENTAÇÃO JURÍDICA');
@@ -765,7 +765,7 @@ function montarParecer(){
   h += N('A análise dos documentos apresentados revela que:');
   const itens = REQ.map(r => { const e = eff(r.id); const o = s['obs_'+r.id]; return `Inciso ${r.n} do art. 4º do Decreto (${esc(lc(r.t))}): <b>${LBL[e].toLowerCase()}</b>${o ? '; ' + esc(o) : ''}`; });
   const pends = c.pend.map(x => `Pendência: ${esc(x).replace(/\((arts?\.)/g, '(Decreto, $1').replace(/§(\d)/g, '§ $1')}`);
-  const todos = [...itens, ...pends];
+  const todos = [...itens, ...(dec === 'indef' ? [] : pends)];
   todos.forEach((t,i) => h += BL(t + (i === todos.length - 1 ? '.' : ';')));
   if (dec === 'def') h += N('Dessa forma, restam preenchidos os pressupostos legais para o reconhecimento da isenção pleiteada.');
   else if (dec === 'indef') h += N('Dessa forma, não restam preenchidos os pressupostos legais para o reconhecimento da isenção pleiteada, uma vez que a ausência de qualquer requisito impede o seu reconhecimento (Decreto, art. 4º, § 1º).');
