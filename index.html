@@ -598,6 +598,22 @@ function coletar(){
 }
 const encOrgao = () => s.enc === 'orgao';
 const destinoTxt = () => encOrgao() ? (s.destino || '').trim() : 'requerente (notificação por carta)';
+/* renda: pede-se a comprovação de toda a família quando faltar comprovante de alguém (e a renda não estiver já acima do limite) */
+function rendaPedida(){
+  if (eff('r6') === 'nao') return false;
+  const r = renda();
+  return r.semLinha.length > 0 || s.rend.some(x => !x.doc);
+}
+const ORIENT_HD = '<p class="n"><b>Orientações sobre os comprovantes de renda</b> (a renda considerada é a soma da renda de todas as pessoas da família que moram no imóvel – Decreto, art. 13):</p>';
+const ORIENT_RENDA = [
+  '<b>Quem trabalha com carteira assinada ou é servidor público:</b> o último contracheque (holerite) ou a Carteira de Trabalho',
+  '<b>Quem é aposentado ou pensionista (INSS ou outro instituto):</b> o extrato do benefício, que pode ser tirado no aplicativo ou site Meu INSS ou no banco onde recebe, ou a carta de concessão',
+  '<b>Quem trabalha por conta própria ou faz bicos</b> (por exemplo: diarista, pedreiro, costureira, vendedor, motorista de aplicativo): uma declaração assinada dizendo quanto ganha por mês, em média; se tiver, junte recibos, notas ou extratos bancários. Quem é MEI pode juntar o certificado do MEI',
+  '<b>Quem recebe aluguel ou pensão alimentícia:</b> o contrato de aluguel, os recibos ou o comprovante da pensão',
+  '<b>Quem não tem nenhuma renda</b> (por exemplo: quem está desempregado, quem cuida da casa ou estudante): uma declaração de ausência de renda, assinada pela própria pessoa',
+  '<b>Entram na soma da renda:</b> salários, aposentadorias, pensões (inclusive pensão alimentícia), benefícios do INSS (como o auxílio-doença), trabalho por conta própria ou bicos frequentes, pró-labore e aluguéis. Vale o valor bruto, isto é, antes dos descontos',
+  '<b>Não entram na soma da renda</b> (mas informe se recebe e traga o comprovante, para que esse valor fique de fora da soma): BPC/LOAS; Bolsa Família; benefícios eventuais da assistência social (por exemplo: auxílio-natalidade, auxílio-funeral, cesta básica); auxílios temporários ou emergenciais do governo; indenizações por danos materiais ou morais; e doações ou ajudas eventuais, que não são recebidas todo mês (Decreto, art. 13, § 2º)'
+];
 /* documentos que o contribuinte deve apresentar para sanar as pendências (texto simples, sem HTML) */
 function docsExigir(){
   const d = [];
@@ -616,13 +632,9 @@ function docsExigir(){
     }
   }
   if (eff('r5') === 'pend' && s.r5_decl !== 'ok') d.push('Declaração firmada pelo requerente, sob as penas da lei, de que não possui outra propriedade, domínio útil ou posse de imóvel tributável pelo IPTU (Decreto, art. 21, V, “a”)');
-  if (eff('r6') !== 'nao'){
-    const LET = {formal:'a', benef:'b', informal:'c', social:'d', sem:'e', outro:'f'};
-    const r = renda();
-    r.semLinha.forEach(n => d.push(`Comprovante de renda de ${n} (contracheque, extrato de benefício, declaração de renda ou outro documento idôneo) ou declaração de ausência de renda (Decreto, art. 21, IV)`));
-    s.rend.filter(x => !x.doc).forEach(x => { const m = s.moradores[+x.m]; const tp = TIPOS[x.tipo]; if (!m || !tp) return;
-      const ex = CAT_DOCS[tp.cat].filter(y => !/^Outro/.test(y)).join(', ').toLowerCase();
-      d.push(`Comprovante do rendimento “${tp.l.replace(/ \(.*\)$/,'')}” de ${m.nome || 'Morador ' + (+x.m + 1)}${ex ? ': ' + ex + ' ou outro documento idôneo' : ''} (Decreto, art. 21, IV, “${LET[tp.cat] || 'f'}”)`); });
+  if (rendaPedida()){
+    const nomes = s.moradores.filter(m => m.nucleo).map((m,i) => m.nome || 'Morador ' + (s.moradores.indexOf(m) + 1));
+    d.push(`Comprovantes de renda de todas as pessoas da família que moram no imóvel (${nomes.join(', ')}), inclusive declaração de quem não tem renda, conforme as orientações abaixo (Decreto, art. 21, IV)`);
   }
   if ((s.destino_obj || '').trim() && !encOrgao()) d.push(s.destino_obj.trim());
   return d;
@@ -833,6 +845,7 @@ function montarParecer(){
     h += N('Ante o exposto, para o prosseguimento da análise do pedido, <b>favor regularizar as seguintes pendências</b>, no prazo de 10 (dez) dias úteis contados do recebimento desta notificação, nos termos do artigo 29, § 2º, do Decreto Municipal nº 1.410/2026:');
     if (!docsTxt.length) h += BL(semInfo('indicar as pendências a regularizar.'));
     docsTxt.forEach((x,i) => h += BL(x + (i === docsTxt.length - 1 ? '.' : ';')));
+    if (rendaPedida()){ h += ORIENT_HD; ORIENT_RENDA.forEach((x,i) => h += BL(x + (i === ORIENT_RENDA.length - 1 ? '.' : ';'))); }
     h += N('Não regularizadas as pendências no prazo, ou sendo insuficiente a documentação apresentada, o pedido será arquivado, sem prejuízo de novo protocolo (Decreto, art. 29, § 3º).');
   } else if (dec === 'pend'){
     h += N(`Ante o exposto, deixa-se, por ora, de decidir pelo deferimento ou pelo indeferimento do pedido, determinando-se o encaminhamento dos autos, por meio de ofício, para <b>${ph((s.destino || '').trim())}</b>, nos termos do artigo 28 do Decreto Municipal nº 1.410/2026, a fim de que verifique e se manifeste sobre as pendências indicadas${s.destino_obj ? ', especialmente: ' + esc(s.destino_obj) : ''}.`);
@@ -875,7 +888,7 @@ const MOD_CAMPOS = [
   ['destino','Destino da pendência (órgão, se houver)'],['destino_obs','Observação ao destinatário (pendência)'],['obs_triagem','Observação da triagem'],
   ['fiscal','Fiscal'],['matricula','Matrícula'],['data','Data de hoje']
 ];
-const MOD_LISTAS = [['motivos','Motivos do indeferimento'],['pendencias','Pendências'],['requisitos','Situação de cada requisito'],['documentos_apresentados','Documentos apresentados'],['documentos_ausentes','Documentos ausentes'],['documentos_exigidos','Documentos a apresentar em 10 dias úteis (pendência)']];
+const MOD_LISTAS = [['motivos','Motivos do indeferimento'],['pendencias','Pendências'],['requisitos','Situação de cada requisito'],['documentos_apresentados','Documentos apresentados'],['documentos_ausentes','Documentos ausentes'],['documentos_exigidos','Documentos a apresentar em 10 dias úteis (pendência)'],['orientacoes_renda','Orientações sobre comprovantes de renda (quando pedidos)']];
 const MOD_BLOCOS = [['ementa','Ementa'],['objeto','Do objeto'],['fatos','Dos fatos (inclui o quadro de renda)'],['fundamentacao','Da fundamentação jurídica'],['analise','Da análise técnica'],['conclusao','Da conclusão'],['encaminhamento','Do encaminhamento'],['assinatura','Local, data, fiscal e matrícula']];
 const MOD_SEC = {'DO OBJETO':'objeto','DOS FATOS':'fatos','DA FUNDAMENTAÇÃO JURÍDICA':'fundamentacao','DA ANÁLISE TÉCNICA':'analise','DA CONCLUSÃO':'conclusao','DO ENCAMINHAMENTO':'encaminhamento'};
 /* divide o parecer automático em blocos, pelos títulos */
@@ -904,7 +917,7 @@ const NUM = '\u0001';
 /* transforma o texto do modelo em parecer: # título, - item, | centralizado, **negrito**, {{campo}}, {{n}} numeração */
 function aplicarModelo(txt, r){
   const f = camposModelo(r), bl = blocosAuto(r.h);
-  const listas = {documentos_exigidos:r.ctx.docs || [], motivos:r.ctx.motivos, pendencias:r.ctx.pends.map(x => x.replace(/^Pendência: /,'')), requisitos:r.ctx.itens, documentos_apresentados:r.ctx.pres, documentos_ausentes:r.ctx.aus};
+  const listas = {orientacoes_renda:rendaPedida() ? ORIENT_RENDA : [], documentos_exigidos:r.ctx.docs || [], motivos:r.ctx.motivos, pendencias:r.ctx.pends.map(x => x.replace(/^Pendência: /,'')), requisitos:r.ctx.itens, documentos_apresentados:r.ctx.pres, documentos_ausentes:r.ctx.aus};
   const fim = (i, n) => i === n - 1 ? '.' : ';';
   const inl = t => esc(t).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>').replace(/\{\{\s*([\w:]+)\s*\}\}/g, (m, k) => {
     k = k.toLowerCase();
@@ -919,6 +932,7 @@ function aplicarModelo(txt, r){
     const l = linha.trim(); if (!l) return;
     const so = /^\{\{\s*([\w:]+)\s*\}\}$/.exec(l); const k = so && so[1].toLowerCase();
     if (k && k.startsWith('bloco:') && k.slice(6) in bl){ h += k === 'bloco:ementa' ? `<p class="h">${esc(bl.ementa)}</p>` : bl[k.slice(6)].replace(/(<p class="n">)\d+\. /g, `$1${NUM}. `); return; }
+    if (k === 'orientacoes_renda'){ const a = listas[k]; if (a.length) h += ORIENT_HD + a.map((x,i) => `<p class="b"><span class="bl">⦁</span> ${x}${fim(i, a.length)}</p>`).join(''); return; }
     if (k && k in listas){ const a = listas[k]; h += a.length ? a.map((x,i) => `<p class="b"><span class="bl">⦁</span> ${x}${fim(i, a.length)}</p>`).join('') : `<p class="b"><span class="bl">⦁</span> nenhum.</p>`; return; }
     if (/^#\s/.test(l)) h += `<p class="h">${inl(l.replace(/^#\s+/,''))}</p>`;
     else if (/^\|\s?/.test(l)) h += `<p class="c">${inl(l.replace(/^\|\s?/,''))}</p>`;
@@ -1298,7 +1312,7 @@ const MOD_EX = {
   tri: '# Isenção de IPTU. Art. 113 da LC nº 203/2022. Decreto Municipal nº 1.410/2026. Não enquadramento.\n# DO OBJETO\n{{n}}. Trata-se de pedido de isenção de IPTU formulado por {{requerente}} (CPF {{cpf}}), relativo ao imóvel de inscrição imobiliária nº {{inscricao}}, situado em {{endereco}}, para o exercício de {{exercicio}}.\n# DA ANÁLISE\n{{n}}. Verificou-se que o proprietário não é aposentado nem pensionista e que o imóvel não tem como morador pessoa com necessidades especiais permanentes. {{obs_triagem}}\n# DA CONCLUSÃO\n{{n}}. Ante o exposto, **indefere-se** o pedido, por:\n{{motivos}}\n{{n}}. Fica ressalvado ao requerente o direito de impugnação ou recurso, nos termos da Lei Complementar nº 203, de 2022 (Decreto, art. 38).\n{{bloco:assinatura}}',
   def: '{{bloco:ementa}}\n# DO OBJETO\n{{n}}. Trata-se de pedido de isenção de IPTU formulado por {{requerente}} (CPF {{cpf}}), relativo ao imóvel de inscrição imobiliária nº {{inscricao}}, situado em {{endereco}}, para o exercício de {{exercicio}}.\n# DOS FATOS\n{{bloco:fatos}}\n# DA ANÁLISE\n{{n}}. Da análise dos requisitos do art. 4º do Decreto Municipal nº 1.410/2026, verificou-se:\n{{requisitos}}\n# DA CONCLUSÃO\n{{n}}. Ante o exposto, **defere-se** o reconhecimento da isenção do IPTU, com eficácia a partir do exercício de **{{exercicio_inicial}}**, pelo prazo de 4 (quatro) anos (Decreto, art. 32).\n{{bloco:assinatura}}',
   indef: '{{bloco:ementa}}\n# DO OBJETO\n{{n}}. Trata-se de pedido de isenção de IPTU formulado por {{requerente}} (CPF {{cpf}}), relativo ao imóvel de inscrição imobiliária nº {{inscricao}}, situado em {{endereco}}, para o exercício de {{exercicio}}.\n# DOS FATOS\n{{bloco:fatos}}\n# DA ANÁLISE\n{{n}}. Da análise dos requisitos do art. 4º do Decreto Municipal nº 1.410/2026, verificou-se:\n{{requisitos}}\n# DA CONCLUSÃO\n{{n}}. Ante o exposto, **indefere-se** o pedido, pelos seguintes motivos:\n{{motivos}}\n{{n}}. Fica ressalvado ao requerente o direito de impugnação ou recurso, nos termos da Lei Complementar nº 203, de 2022 (Decreto, art. 38).\n{{bloco:assinatura}}',
-  pend: '{{bloco:ementa}}\n# DO OBJETO\n{{n}}. Trata-se de pedido de isenção de IPTU formulado por {{requerente}} (CPF {{cpf}}), relativo ao imóvel de inscrição imobiliária nº {{inscricao}}, situado em {{endereco}}, para o exercício de {{exercicio}}.\n# DAS PENDÊNCIAS\n{{n}}. Para o prosseguimento da análise do pedido, **favor regularizar as seguintes pendências**, no prazo de 10 (dez) dias úteis contados do recebimento desta notificação (Decreto, art. 29, § 2º):\n{{documentos_exigidos}}\n{{n}}. Não regularizadas as pendências no prazo, ou sendo insuficiente a documentação apresentada, o pedido será arquivado, sem prejuízo de novo protocolo (Decreto, art. 29, § 3º).\n{{bloco:assinatura}}'
+  pend: '{{bloco:ementa}}\n# DO OBJETO\n{{n}}. Trata-se de pedido de isenção de IPTU formulado por {{requerente}} (CPF {{cpf}}), relativo ao imóvel de inscrição imobiliária nº {{inscricao}}, situado em {{endereco}}, para o exercício de {{exercicio}}.\n# DAS PENDÊNCIAS\n{{n}}. Para o prosseguimento da análise do pedido, **favor regularizar as seguintes pendências**, no prazo de 10 (dez) dias úteis contados do recebimento desta notificação (Decreto, art. 29, § 2º):\n{{documentos_exigidos}}\n{{orientacoes_renda}}\n{{n}}. Não regularizadas as pendências no prazo, ou sendo insuficiente a documentação apresentada, o pedido será arquivado, sem prejuízo de novo protocolo (Decreto, art. 29, § 3º).\n{{bloco:assinatura}}'
 };
 let mdRasc = null, mdAba = 'def';
 function mdStatus(){
