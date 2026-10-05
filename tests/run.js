@@ -24,7 +24,7 @@ const X = '<img src=x onerror=alert("XSS")>';
   const f = (p, k, v) => p.fill(`[data-k="${k}"]`, v);
   const sel = (p, k, v) => p.selectOption(`[data-k="${k}"]`, v);
   const gerar = async p => { await p.click('#btnGerar'); return p.innerText('#parecer'); };
-  const dados = async (p, extra = {}) => { await f(p,'numero','4085/2026'); await f(p,'requerente','Maria da Silva'); await f(p,'cpf','111.222.333-44'); await f(p,'cci','411'); await f(p,'sm','1518'); for (const [k,v] of Object.entries(extra)) await f(p,k,v); };
+  const dados = async (p, extra = {}) => { await f(p,'numero','4085/2026'); await f(p,'requerente','Maria da Silva'); await f(p,'cpf','111.222.333-44'); await f(p,'cci','411'); await f(p,'sm','1518'); await f(p,'exercicio', String(await p.evaluate(() => ANO_TRANSICAO))); for (const [k,v] of Object.entries(extra)) await f(p,k,v); };
   /* formulário completo e favorável: aposentado, requisitos atendidos, uma renda comprovada */
   async function tudoOk(p, renda = 1400){
     await p.check('[data-k="c_apos"]'); await p.selectOption('[data-k="ap_doc"]', {index: 2});
@@ -210,10 +210,17 @@ const X = '<img src=x onerror=alert("XSS")>';
   sec('Ano e modelos próprios');
   p = await abrir();
   ok(await p.inputValue('[data-k="exercicio"]') === String(new Date().getFullYear()), 'exercício padrão é o ano corrente');
+  ok(!(await p.evaluate(() => document.querySelector('#form').textContent.includes('${'))), 'formulário sem ${…} por substituir (ano do art. 34)');
   await dados(p); await p.check('[data-k="c_nenhuma"]');
   await p.evaluate(() => document.querySelector('#cardCfg').open = true); await p.click('#btnModelos'); await p.click('[data-mdaba="tri"]'); await p.click('#mdExemplo'); await p.click('#mdSalvar');
   t = await gerar(p);
   ok(/Ante o exposto, indefere-se o pedido, por não atendido/.test(t) && /DESPACHO DECISÓRIO/.test(t), 'modelo próprio (exemplo) é aplicado');
+  await p.context().close();
+
+  p = await abrir(); await dados(p); await tudoOk(p); await sel(p,'t_pago','sim');
+  await p.evaluate(() => document.querySelector('#cardCfg').open = true); await sel(p,'detalhe','enxuto');
+  t = await gerar(p);
+  ok(/IPTU\/\d{4} não impede/.test(t) && !t.includes('${'), 'despacho enxuto: ano do IPTU já pago substituído');
   await p.context().close();
 
   sec('Acessibilidade e layout');

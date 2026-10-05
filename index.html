@@ -493,9 +493,9 @@ function build(){
   h += `<section class="card"><h2>5. Efeitos no tempo</h2>
   <div id="box2026">
   <p class="base">Decreto art. 34 (pedidos do exercício de ${ANO_TRANSICAO})</p>
-  ${R('Todos os requisitos já estavam preenchidos em 01/01/${ANO_TRANSICAO} (fato gerador)?', S('t_ini',[['','Não analisado'],['sim','Sim'],['nao','Não – surgiram depois (art. 34, §4º)']]))}
-  ${R('Documentos emitidos após 01/01/${ANO_TRANSICAO} permitem concluir que a situação já existia?', S('t_doc',[['','Não se aplica / não analisado'],['sim','Sim (art. 34, §§2º e 3º)'],['nao','Não']]))}
-  ${R('IPTU/${ANO_TRANSICAO} já pago, total ou parcialmente?', S('t_pago',[['','Não informado'],['sim','Sim (art. 34, §§5º e 6º)'],['nao','Não']]))}
+  ${R(`Todos os requisitos já estavam preenchidos em 01/01/${ANO_TRANSICAO} (fato gerador)?`, S('t_ini',[['','Não analisado'],['sim','Sim'],['nao','Não – surgiram depois (art. 34, §4º)']]))}
+  ${R(`Documentos emitidos após 01/01/${ANO_TRANSICAO} permitem concluir que a situação já existia?`, S('t_doc',[['','Não se aplica / não analisado'],['sim','Sim (art. 34, §§2º e 3º)'],['nao','Não']]))}
+  ${R(`IPTU/${ANO_TRANSICAO} já pago, total ou parcialmente?`, S('t_pago',[['','Não informado'],['sim','Sim (art. 34, §§5º e 6º)'],['nao','Não']]))}
   </div>
   <div id="boxOutros" class="alert" style="display:none">Para exercício diferente de ${ANO_TRANSICAO}, o Decreto (art. 35) remete o prazo de requerimento e renovação ao calendário tributário anual ou ato próprio da Secretaria. Defina o exercício inicial abaixo.</div>
   ${R('Exercício inicial de eficácia (deixe em branco para usar o sugerido)', I('exi','number','step="1"'))}
@@ -792,11 +792,11 @@ function recalc(){
 
   const nuc = s.moradores.filter(m => m.nucleo).length;
   $('rendTotal').innerHTML = `<b>Renda familiar somada (núcleo: ${nuc} pessoa${nuc===1?'':'s'}):</b> ${brl(rd.total)}<br>
-   <b>Limite (1,5 × salário-mínimo):</b> ${rd.lim ? brl(rd.lim) + ` <small>(1,5 × ${brl(rd.sm)})</small>` : '<i>informe o salário-mínimo no item 1</i>'}<br>
+   <b>Limite (1,5 × salário-mínimo):</b> ${rd.lim ? brl(rd.lim) + ` <small>(1,5 × ${brl(rd.sm)})</small>` : '<i>informe o salário-mínimo no item 2</i>'}<br>
    ${rd.lim && rd.hasData ? (rd.total <= rd.lim ? `<span class="badge b-ok">Dentro do limite</span>` : `<span class="badge b-nao">Acima do limite em ${brl(rd.total - rd.lim)}</span>`) : ''}
    ${rd.excl ? `<br><small>Valores não computados (art. 13, §2º): ${brl(rd.excl)}</small>` : ''}`;
 
-  const sg = exiSug(); $('exiSug').textContent = sg ? `Sugerido: ${sg}${is26 && s.t_ini==='nao' ? ' (art. 34, §4º: requisitos surgiram após 01/01/${ANO_TRANSICAO})' : ''}` : '';
+  const sg = exiSug(); $('exiSug').textContent = sg ? `Sugerido: ${sg}${is26 && s.t_ini==='nao' ? ` (art. 34, §4º: requisitos surgiram após 01/01/${ANO_TRANSICAO})` : ''}` : '';
   document.querySelector('[data-k="exi"]').placeholder = sg || '';
 
   const c = coletar(); const a = autoDecisao(c);
@@ -1055,7 +1055,7 @@ function montarParecer(){
       if (ex === ANO_TRANSICAO){
         t += ' ' + ({sim:`Requisitos já preenchidos em 1º de janeiro de ${ANO_TRANSICAO} (Decreto, art. 34, § 1º).`, nao:`Requisitos surgidos somente após 1º de janeiro de ${ANO_TRANSICAO}, com efeitos apenas a partir do exercício seguinte (Decreto, art. 34, § 4º).`}[s.t_ini] || dMark(`informar se os requisitos já estavam preenchidos em 1º de janeiro de ${ANO_TRANSICAO}.`));
         if (s.t_doc === 'nao') t += ' Os documentos emitidos após essa data não permitem concluir que a situação já existia (art. 34, § 3º).';
-        if (s.t_pago === 'sim') t += ' O pagamento do IPTU/${ANO_TRANSICAO} não impede a isenção; o contribuinte poderá requerer restituição ou compensação (art. 34, §§ 5º e 6º).';
+        if (s.t_pago === 'sim') t += ` O pagamento do IPTU/${ANO_TRANSICAO} não impede a isenção; o contribuinte poderá requerer restituição ou compensação (art. 34, §§ 5º e 6º).`;
       }
       if (s.condicao && s.condicao !== 'prop') t += ` Registra-se que o requerente figura como ${cond}, e não como proprietário do imóvel (LC nº 203/2022, art. 113, caput).`;
       b.fatos = dP(t) + (s.rend.length > 1 ? tabelaRenda(rd) : '');
@@ -1355,7 +1355,7 @@ let toastT = null;
 function registrarProcesso(dec){
   parecerGerado = true;
   const n = (s.numero || '').trim();
-  if (!n){ regMsg('Despacho gerado, mas NÃO salvo nem registrado: informe o nº do processo (item 1) e gere novamente.', true); return; }
+  if (!n){ regMsg('Despacho gerado, mas NÃO salvo nem registrado: informe o nº do processo (item 2) e gere novamente.', true); return; }
   curRec = {ts:new Date().toISOString(), numero:n, desp:s.desp ? despTxt(s.desp) : '', despN:s.desp ? s.desp.n : '', despAno:s.desp ? s.desp.ano : '', requerente:s.requerente||'', inscricao:s.inscricao||'', cci:s.cci||'', fiscal:s.fiscal||'', cond:condArt113(), resultado:dec === 'pend' ? (encOrgao() ? 'Encaminhado para verificação' + ((s.destino || '').trim() ? ' – ' + s.destino.trim() : '') : 'Pendência – contribuinte notificado por carta') : RES_L[dec], tipo:s.tipo==='renov' ? 'Renovação' : 'Primeira vez'};
   if (dirH){ salvarProcesso({registro:true}); return; }
   const i = reg.findIndex(r => regKey(r.numero) === regKey(n));
@@ -1467,7 +1467,7 @@ async function escreverRelatorio(){
 }
 async function salvarProcesso(o = {}){
   const n = (s.numero || '').trim();
-  if (!n){ alert('Informe o nº do processo (item 1) para poder salvar.'); return false; }
+  if (!n){ alert('Informe o nº do processo (item 2) para poder salvar.'); return false; }
   const payload = {tipo:'processo-iptu', versao:1, salvoEm:new Date().toISOString(), status:curRec ? 'concluido' : 'rascunho', estado:s, registro:curRec, parecerHtml:parecerGerado ? $('parecer').innerHTML : null};
   const nome = safeName(n);
   if (!dirH){
