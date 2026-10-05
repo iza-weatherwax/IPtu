@@ -27,18 +27,21 @@ navegador; o botão **Baixar modelos** gera uma cópia em `.json`.
 
 ## Texto do despacho
 
-O texto automático tem dois níveis de detalhe (card **Modelo do despacho**):
-**Completo** (padrão), com seções, quadro dos seis requisitos em linguagem
-simples e um "Em resumo" no fim, e **Enxuto**, só com síntese, motivos e
-decisão. Todo despacho abre com um parágrafo de contexto normativo (parecer
-da PGM e Decreto nº 1.410/2026), em versão completa e em versão curta para
-as cartas ao contribuinte; os dois textos podem ser editados ou desligados no
-mesmo card.
+O despacho segue o modelo do departamento (Despacho Decisório): cabeçalho com
+nº do despacho, processo, interessado, CNPJ/CPF e assunto; abertura "Uma vez
+recebido o processo…"; parágrafo de contexto normativo (parecer da PGM e
+Decreto nº 1.410/2026, editável ou desligável no card **Modelo do despacho**);
+e o corpo conforme o resultado. Nas pendências, cada documento faltante é
+pedido de forma específica, por pessoa e por tipo de rendimento (por exemplo,
+"informar o valor mensal bruto da pensão recebida por Fulano"), em itens a),
+b), c). A numeração dos parágrafos e os títulos de seção são opcionais.
+O texto tem dois níveis de detalhe: **Completo** (padrão), com quadro dos
+requisitos em linguagem simples e "Em resumo", e **Enxuto**.
 
 ## Numeração do despacho
 
-Cada despacho recebe um número automático por ano (ex.: `DESPACHO Nº 12/2026`),
-com sigla opcional do setor. O mesmo processo mantém o número enquanto o
+Cada despacho recebe um número automático por ano (ex.: `DESPACHO DECISÓRIO Nº 12/2026`),
+com formato configurável (ex.: `461-{nn}/{ano}`). O mesmo processo mantém o número enquanto o
 resultado não muda; um novo resultado (por exemplo, arquivamento depois de
 uma notificação) recebe novo número. A sequência é guardada no navegador e
 acompanha os despachos já registrados na pasta de processos; no card
