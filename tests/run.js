@@ -94,6 +94,43 @@ const X = '<img src=x onerror=alert("XSS")>';
   ok(/Pendência/.test(await p.textContent('#sugestao')) && /À condição de aposentado/.test(await p.innerText('#lstPendC')), 'documento ausente: pendência com o pedido específico');
   await p.context().close();
 
+  sec('Pedidos que não dependem do status do requisito (MEI, outro imóvel, pendência marcada)');
+  /* MEI sem os documentos: pendência (não impedimento), com o CCMEI e os complementares marcados, junto com a renda */
+  p = await abrir(); await dados(p); await p.check('[data-k="c_apos"]'); await p.selectOption('[data-k="ap_doc"]', {index: 2});
+  await sel(p,'r1_ativ','mei'); await sel(p,'mi_ccmei','falta'); await p.check('[data-k="mc_2"]'); await p.check('[data-k="mc_4"]'); await p.click('#addRend');
+  ok(/Pendência/.test(await p.textContent('#sugestao')), 'MEI com CCMEI ausente: pendência, não impedimento');
+  t = await gerar(p);
+  ok(/microempreendedor individual/.test(t) && /CCMEI/.test(t) && /DASN-SIMEI/.test(t) && /atividade é exercida no imóvel/.test(t) && /art\. 21, VI, “a” e “b”/.test(t), 'MEI: pede o CCMEI e os complementares marcados');
+  ok(/composição da renda/.test(t) && !/\(faz-se necessária a apresentação do Certificado[^)]*\([^)]*\)\)/.test(t), 'MEI: também pede a renda, sem parênteses aninhados');
+  await sel(p,'decisao','pend'); t = await gerar(p);
+  ok(/CCMEI/.test(t), 'MEI: conclusão “Pendência” escolhida à mão continua pedindo o CCMEI');
+  await p.context().close();
+
+  p = await abrir(); await dados(p); await p.check('[data-k="c_apos"]'); await p.selectOption('[data-k="ap_doc"]', {index: 2}); await sel(p,'r1_ativ','mei');
+  ok(/CCMEI \(atividade de MEI informada\)/.test(await p.innerText('#lstAviso')), 'MEI com CCMEI não conferido: aviso (não vira pedido)');
+  await p.evaluate(() => { const e = JSON.parse(JSON.stringify(s)); e.mi_ccmei = 'nao'; carregarEstado({tipo:'processo-iptu', estado:e, registro:null, parecerHtml:''}, null); });
+  ok(await p.evaluate(() => s.mi_ccmei) === 'falta' && /Pendência/.test(await p.textContent('#sugestao')), 'processo antigo (CCMEI “não atendido”) passa a CCMEI ausente');
+  await p.context().close();
+
+  /* outro imóvel: "a esclarecer" gera pendência; "impede" gera indeferimento; pendência forçada não esconde o assunto */
+  p = await abrir(); await dados(p); await p.check('[data-k="c_apos"]'); await p.selectOption('[data-k="ap_doc"]', {index: 2}); await p.click('#addRend');
+  await sel(p,'r5_decl','ok'); await sel(p,'r5_cons','esclarecer'); await f(p,'r5_det','inscrição 98765');
+  ok(/Pendência/.test(await p.textContent('#sugestao')), 'outro imóvel “a esclarecer”: pendência');
+  t = await gerar(p);
+  ok(/outro imóvel que consta em seu nome, a saber: inscrição 98765/.test(t) && /Cartório de Registro de Imóveis/.test(t) && /art\. 12 e art\. 21, V, “c”/.test(t) && /composição da renda/.test(t), 'outro imóvel: pede os documentos que o esclareçam, além da renda');
+  await sel(p,'r5_cons','outro');
+  ok(/Indeferimento/.test(await p.textContent('#sugestao')), 'outro imóvel que impede: indeferimento');
+  await sel(p,'decisao','pend'); t = await gerar(p);
+  ok(/outro imóvel que consta em seu nome/.test(t) && /Atenção: a conclusão escolhida é “Pendência”/.test(await p.innerText('#lstPendC')), 'pendência escolhida à mão com “consta outro imóvel”: pede esclarecimento e avisa do impeditivo');
+  await p.context().close();
+
+  p = await abrir(); await dados(p); await p.check('[data-k="c_apos"]'); await p.selectOption('[data-k="ap_doc"]', {index: 2});
+  await sel(p,'r5_cons','nenhum'); await sel(p,'r5_decl','ok'); await p.check('[data-k="r5c_2"]'); await f(p,'obs_r5','certidão de casamento'); await sel(p,'decisao','pend');
+  ok(/outros documentos necessários à verificação[^]*certidão de casamento/.test(await p.innerText('#lstPendC')), 'inciso V: “outros documentos” marcados são pedidos mesmo com o requisito atendido');
+  await f(p,'obs_r2','enviar fotos do imóvel'); await sel(p,'st_r2','pend');
+  ok(/Ao uso unifamiliar \(enviar fotos do imóvel\)/.test(await p.innerText('#lstPendC')), 'requisito marcado como pendente: a observação do fiscal vira pedido');
+  await p.context().close();
+
   sec('Arquivamento e indeferimento direto');
   p = await abrir(); await dados(p); await p.check('[data-k="c_apos"]'); await p.selectOption('[data-k="ap_doc"]', 'falta'); await p.evaluate(() => document.querySelector('#cardCfg').open = true); await f(p,'fmtnum','461-{nn}/{ano}');
   await sel(p,'decisao','pend'); t = await gerar(p);
@@ -133,6 +170,12 @@ const X = '<img src=x onerror=alert("XSS")>';
   }
   p = await abrir(); await p.check('[data-k="c_apos"]'); await p.fill('[data-l="moradores"][data-i="0"][data-f="nome"]', X); await f(p,'numero','1/1'); await f(p,'requerente','F'); await p.click('#addRend'); await sel(p,'decisao','pend'); await p.click('#btnGerar'); await p.waitForTimeout(150);
   ok(p.__xss === 0, 'sem injeção de código no nome do morador'); await p.context().close();
+  p = await abrir(); await p.check('[data-k="c_apos"]'); await f(p,'numero','1/1'); await f(p,'requerente','Fulano'); await f(p,'sm','1518');
+  await sel(p,'r5_cons','esclarecer'); await f(p,'r5_det',X); await p.check('[data-k="r5c_2"]'); await f(p,'obs_r5',X);
+  await sel(p,'r1_ativ','mei'); await sel(p,'mi_ccmei','falta'); await sel(p,'st_r2','pend'); await f(p,'obs_r2',X);
+  for (const d of ['pend','indef','def','arq']){ await sel(p,'decisao',d); await p.click('#btnGerar'); }
+  await p.waitForTimeout(150);
+  ok(p.__xss === 0 && await p.locator('#parecer img').count() === 0 && await p.locator('#lstPendC img').count() === 0, 'sem injeção de código nos novos pedidos (outro imóvel, MEI, observação do requisito)'); await p.context().close();
   p = await abrir(); await p.evaluate(() => { document.querySelector('#cardCfg').open = true; document.querySelector('#abCompleta').closest('details').open = true; }); await p.fill('#abCompleta', X); await p.check('[data-k="c_nenhuma"]'); await f(p,'numero','1/1'); await f(p,'requerente','F'); await p.click('#btnGerar'); await p.waitForTimeout(150);
   ok(p.__xss === 0, 'sem injeção de código no parágrafo de contexto'); await p.context().close();
 

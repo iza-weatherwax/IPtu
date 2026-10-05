@@ -114,6 +114,16 @@ para guardar os processos.
   três estados: *não conferido* (não gera pendência), *ausente* (gera pedido) ou
   o documento apresentado. Sem rendimentos lançados, só se pede a declaração de
   renda quando o fiscal marca "Nenhum comprovante de renda foi apresentado".
+- Atividade de MEI: o CCMEI também tem três estados. *Ausente* gera pendência
+  (não é impedimento) e os documentos complementares marcados (CNPJ, DASN-SIMEI
+  etc.) também são pedidos. A consulta ao cadastro tem a opção "consta outro
+  imóvel – a esclarecer" (pendência: pede os documentos que esclareçam a
+  situação do imóvel) e "consta outro imóvel – impede" (indeferimento).
+- O despacho de pendência pede tudo o que o fiscal marcou como ausente ou a
+  pedir, qualquer que seja a situação do requisito. Um requisito marcado à mão
+  como "Pendente" entra no despacho com o texto de "Observação para o
+  despacho"; se a conclusão "Pendência" for escolhida à mão apesar de haver
+  requisito não atendido, o painel avisa que o despacho não cita o impeditivo.
 - O despacho só recebe número e é registrado quando o nº do processo e o
   requerente estão preenchidos; antes disso é um rascunho. O botão **Liberar o
   nº deste processo** desfaz a numeração.
