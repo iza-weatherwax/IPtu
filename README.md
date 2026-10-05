@@ -25,6 +25,16 @@ blocos do texto automático, como `{{bloco:fatos}}`. Resultado sem modelo
 cadastrado continua saindo no formato automático. Os modelos ficam só no
 navegador; o botão **Baixar modelos** gera uma cópia em `.json`.
 
+## Texto do despacho
+
+O texto automático tem dois níveis de detalhe (card **Modelo do despacho**):
+**Completo** (padrão), com seções, quadro dos seis requisitos em linguagem
+simples e um "Em resumo" no fim, e **Enxuto**, só com síntese, motivos e
+decisão. Todo despacho abre com um parágrafo de contexto normativo (parecer
+da PGM e Decreto nº 1.410/2026), em versão completa e em versão curta para
+as cartas ao contribuinte; os dois textos podem ser editados ou desligados no
+mesmo card.
+
 ## Numeração do despacho
 
 Cada despacho recebe um número automático por ano (ex.: `DESPACHO Nº 12/2026`),
