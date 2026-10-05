@@ -55,17 +55,24 @@ aside ul{margin:4px 0 0;padding-left:18px;font-size:12.5px}
 .bar{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0}
 #parecerWrap{padding:0 20px 30px}
 #regMsg{position:fixed;right:16px;bottom:16px;max-width:440px;z-index:20;box-shadow:0 2px 10px rgba(0,0,0,.25)}
-.doc{font-family:Arial,Helvetica,sans-serif;font-size:12pt;line-height:1.15;text-align:justify}
+.doc{font-family:Arial,Helvetica,sans-serif;font-size:12pt;line-height:1.15;text-align:justify;color:#000}
 #parecer{background:#fff;border:1px solid var(--bd);border-radius:8px;padding:30px 36px;min-height:200px}
-.doc p{margin:0 0 13.8pt}
-.doc p.h{font-weight:700;break-after:avoid}
-.doc p.b{margin:0}
-.doc p.b:not(:has(+ p.b)){margin-bottom:13.8pt}
-.doc p.c{text-align:center;margin:0}
+.doc p{margin:0 0 12pt}
+.doc p.t{text-align:center}
+.doc p.h{font-weight:700;margin:18pt 0 6pt;break-after:avoid}
 .doc p.l{text-align:left;margin:0}
-.doc p.b .bl{font-family:"Cambria Math",serif}
-.doc table{margin:0 0 13.8pt;width:100%;border-collapse:collapse;font-family:"Aptos Narrow","Arial Narrow",Arial,sans-serif;font-size:11pt;line-height:1.1}
-.doc th,.doc td{border:1px solid #000;padding:2px 5px;text-align:left;vertical-align:middle;font-size:11pt}
+.doc p.l:not(:has(+ p.l)){margin-bottom:12pt}
+.doc p.c{text-align:center;margin:0}
+.doc p.c:not(:has(+ p.c, + p.sig)){margin-bottom:12pt}
+.doc p.i,.doc p.b{text-align:left;margin:0 0 6pt;padding-left:1.6em;text-indent:-1.6em}
+.doc p.i:not(:has(+ p.i)),.doc p.b:not(:has(+ p.b)){margin-bottom:12pt}
+.doc .lt{display:inline-block;width:1.32em;text-indent:0} /* + o espaço que vem depois = recuo de 1,6em */
+.doc p.r{border:1px solid #888;background:#f2f2f2;padding:6pt 8pt}
+.doc p.sig{width:8cm;margin:36pt auto 0;padding-top:3pt;border-top:1px solid #000;text-align:center}
+.doc p.anx{text-align:center;margin:30pt 0 12pt;padding-top:18pt;border-top:1px dashed #999;break-before:page}
+.doc table{margin:0 0 12pt;width:100%;border-collapse:collapse;font-size:10pt;line-height:1.2}
+.doc th,.doc td{border:1px solid #000;padding:3pt 5pt;text-align:left;vertical-align:top;font-size:10pt}
+.doc th{background:#eee;font-weight:700}
 .doc tr{break-inside:avoid}
 .doc td[data-a=center],.doc th[data-a=center]{text-align:center}
 .doc td[data-a=right],.doc th[data-a=right]{text-align:right}
@@ -87,6 +94,7 @@ aside ul{margin:4px 0 0;padding-left:18px;font-size:12.5px}
   body{background:#fff}
   #printRoot{display:block;padding:0 2cm 0 3cm}
   .doc mark{background:none}
+  .doc p.anx{border:0;padding-top:0;margin-top:0}
   .pt>thead{display:table-header-group}
   .pt>tfoot{display:table-footer-group}
 }
@@ -233,12 +241,7 @@ aside ul{margin:4px 0 0;padding-left:18px;font-size:12.5px}
       <div class="bar"><button class="sec sm" id="abRestaurar">Restaurar texto padrão</button></div>
     </details>
     <label class="chk" style="margin-top:6px"><input type="checkbox" data-k="numerar"><span>Numerar os parágrafos</span></label>
-    <label class="chk"><input type="checkbox" data-k="titulos"><span>Mostrar títulos das seções (Do objeto, Dos fatos…)</span></label>
-    <label style="font-size:12px;color:var(--mut);display:block;margin-top:6px">Detalhamento do texto automático</label>
-    <select data-k="detalhe">
-      <option value="">Completo (seções, quadro dos requisitos e “Em resumo”)</option>
-      <option value="enxuto">Enxuto (só síntese, motivos e decisão)</option>
-    </select>
+    <label class="chk"><input type="checkbox" data-k="sem_titulos"><span>Ocultar os títulos das seções (Do pedido, Da análise…)</span></label>
     <label style="font-size:12px;color:var(--mut);display:block;margin-top:6px">Modelo do despacho</label>
     <select id="modeloUso">
       <option value="auto">Automático (padrão do Assistente)</option>
@@ -316,24 +319,24 @@ const CAT_DOCS = {
   sem:['Declaração de ausência de renda','Relatório social / declaração do CRAS / outro documento idôneo'],
   outro:['Outro documento idôneo que permita aferir a renda']
 };
-/* comp:true = computa na renda familiar (art. 13, §1º); false = não computa (art. 13, §2º) */
+/* comp:true = computa na renda familiar (art. 13, §1º); false = não computa (art. 13, §2º); s = nome curto (quadro de renda do despacho) */
 const TIPOS = {
-  salario:{l:'Salário, vencimento, subsídio, remuneração ou provento',comp:true,cat:'formal',c:'art. 13, §1º, I'},
-  aposent:{l:'Aposentadoria',comp:true,cat:'benef',c:'art. 13, §1º, II e §5º'},
-  pensao:{l:'Pensão (por morte ou equivalente)',comp:true,cat:'benef',c:'art. 13, §1º, III e §5º'},
-  autonomo:{l:'Trabalho autônomo, informal, eventual reiterado ou atividade empresarial',comp:true,cat:'informal',c:'art. 13, §1º, IV'},
-  prolabore:{l:'Pró-labore',comp:true,cat:'formal',c:'art. 13, §1º, V'},
-  aluguel:{l:'Aluguel, arrendamento ou outra renda patrimonial',comp:true,cat:'outro',c:'art. 13, §1º, VI'},
-  pensalim:{l:'Pensão alimentícia',comp:true,cat:'outro',c:'art. 13, §1º, VII'},
-  benprev:{l:'Outro benefício previdenciário',comp:true,cat:'benef',c:'art. 13, §1º, VIII e §5º'},
-  outrohab:{l:'Outro rendimento bruto habitual',comp:true,cat:'outro',c:'art. 13, caput e §1º (“entre outros”)'},
-  bpc:{l:'BPC (não computa)',comp:false,cat:'benef',c:'art. 13, §2º, I; §§3º e 4º'},
-  bolsa:{l:'Bolsa Família (não computa)',comp:false,cat:'social',c:'art. 13, §2º, II'},
-  eventual:{l:'Benefício eventual de assistência social (não computa)',comp:false,cat:'social',c:'art. 13, §2º, III'},
-  auxtemp:{l:'Auxílio temporário, sazonal ou emergencial do Poder Público (não computa)',comp:false,cat:'social',c:'art. 13, §2º, IV'},
-  indeniz:{l:'Valor indenizatório de dano material ou moral (não computa)',comp:false,cat:'outro',c:'art. 13, §2º, V'},
-  doacao:{l:'Doação eventual ou auxílio sem habitualidade (não computa)',comp:false,cat:'outro',c:'art. 13, §2º, VI'},
-  semrenda:{l:'Ausência de renda (declaração)',comp:true,cat:'sem',c:'art. 21, IV, “e”'}
+  salario:{l:'Salário, vencimento, subsídio, remuneração ou provento',s:'Salário ou remuneração',comp:true,cat:'formal',c:'art. 13, §1º, I'},
+  aposent:{l:'Aposentadoria',s:'Aposentadoria',comp:true,cat:'benef',c:'art. 13, §1º, II e §5º'},
+  pensao:{l:'Pensão (por morte ou equivalente)',s:'Pensão',comp:true,cat:'benef',c:'art. 13, §1º, III e §5º'},
+  autonomo:{l:'Trabalho autônomo, informal, eventual reiterado ou atividade empresarial',s:'Trabalho autônomo ou informal',comp:true,cat:'informal',c:'art. 13, §1º, IV'},
+  prolabore:{l:'Pró-labore',s:'Pró-labore',comp:true,cat:'formal',c:'art. 13, §1º, V'},
+  aluguel:{l:'Aluguel, arrendamento ou outra renda patrimonial',s:'Aluguel ou renda patrimonial',comp:true,cat:'outro',c:'art. 13, §1º, VI'},
+  pensalim:{l:'Pensão alimentícia',s:'Pensão alimentícia',comp:true,cat:'outro',c:'art. 13, §1º, VII'},
+  benprev:{l:'Outro benefício previdenciário',s:'Benefício previdenciário',comp:true,cat:'benef',c:'art. 13, §1º, VIII e §5º'},
+  outrohab:{l:'Outro rendimento bruto habitual',s:'Outro rendimento habitual',comp:true,cat:'outro',c:'art. 13, caput e §1º (“entre outros”)'},
+  bpc:{l:'BPC (não computa)',s:'BPC',comp:false,cat:'benef',c:'art. 13, §2º, I; §§3º e 4º'},
+  bolsa:{l:'Bolsa Família (não computa)',s:'Bolsa Família',comp:false,cat:'social',c:'art. 13, §2º, II'},
+  eventual:{l:'Benefício eventual de assistência social (não computa)',s:'Benefício eventual de assistência social',comp:false,cat:'social',c:'art. 13, §2º, III'},
+  auxtemp:{l:'Auxílio temporário, sazonal ou emergencial do Poder Público (não computa)',s:'Auxílio temporário ou emergencial',comp:false,cat:'social',c:'art. 13, §2º, IV'},
+  indeniz:{l:'Valor indenizatório de dano material ou moral (não computa)',s:'Indenização',comp:false,cat:'outro',c:'art. 13, §2º, V'},
+  doacao:{l:'Doação eventual ou auxílio sem habitualidade (não computa)',s:'Doação eventual',comp:false,cat:'outro',c:'art. 13, §2º, VI'},
+  semrenda:{l:'Ausência de renda (declaração)',s:'Sem renda (declaração)',comp:true,cat:'sem',c:'art. 21, IV, “e”'}
 };
 const REQ = [
   {id:'r1', n:'I', t:'Utilizado unicamente para fins residenciais', b:'Decreto art. 4º, I, e art. 5º; LC art. 113, caput e §1º (MEI: Decreto art. 14)'},
@@ -343,8 +346,7 @@ const REQ = [
   {id:'r5', n:'V', t:'Sem outra propriedade, domínio útil ou posse tributável pelo IPTU', b:'Decreto art. 4º, V, art. 12 e art. 21, V (o rol do art. 12 é do Decreto); LC art. 113, caput'},
   {id:'r6', n:'VI', t:'Renda familiar somada não superior a 1,5 salário-mínimo', b:'Decreto art. 4º, VI, art. 13 e art. 21, IV (exclusões do §2º são do Decreto); LC art. 113, caput'}
 ];
-const TIT_REQ = {r1:'imóvel usado só como moradia', r2:'moradia de uma só família', r3:'imóvel construído e em condições de uso', r4:'proprietário aposentado ou pensionista, ou morador com necessidades especiais permanentes', r5:'sem outro imóvel (propriedade, domínio útil ou posse tributável pelo IPTU)', r6:'renda da família de até 1,5 salário-mínimo'};
-const A_REQ = {r1:'À destinação residencial', r2:'Ao uso unifamiliar', r3:'À existência de edificação', r4:'À condição de aposentado, pensionista ou morador com necessidades especiais permanentes', r5:'À inexistência de outra propriedade', r6:'À renda familiar'};
+const A_REQ = {r1:'Destinação residencial', r2:'Uso unifamiliar', r3:'Edificação', r4:'Condição de aposentado, pensionista ou morador com necessidades especiais permanentes', r5:'Inexistência de outro imóvel', r6:'Renda da família'}; /* assunto do item quando o fiscal marca o requisito como pendente */
 const MEI_ITENS = [
   ['mi_prop','Proprietário enquadrado como MEI, art. 18-A da LC Federal 123/2006 (art. 14, II)'],
   ['mi_compat','Atividade compatível com a legislação federal, municipal, urbanística, sanitária e de liberdade econômica (art. 14, III)'],
@@ -661,54 +663,49 @@ function rendaPedida(){
   const r = renda();
   return r.semLinha.length > 0 || r.semValor.length > 0 || r.semDoc.length > 0;
 }
-const ORIENT_HD = '<p class="n"><b>Orientações sobre os comprovantes de renda</b> (a renda considerada é a soma da renda de todas as pessoas da família que moram no imóvel – Decreto, art. 13):</p>';
-const ORIENT_RENDA = [
-  '<b>Quem trabalha com carteira assinada ou é servidor público:</b> o último contracheque (holerite) ou a Carteira de Trabalho',
-  '<b>Quem é aposentado ou pensionista (INSS ou outro instituto):</b> o extrato do benefício, que pode ser tirado no aplicativo ou site Meu INSS ou no banco onde recebe, ou a carta de concessão',
-  '<b>Quem trabalha por conta própria ou faz bicos</b> (por exemplo: diarista, pedreiro, costureira, vendedor, motorista de aplicativo): uma declaração assinada dizendo quanto ganha por mês, em média; se tiver, junte recibos, notas ou extratos bancários. Quem é MEI pode juntar o certificado do MEI',
-  '<b>Quem recebe aluguel ou pensão alimentícia:</b> o contrato de aluguel, os recibos ou o comprovante da pensão',
-  '<b>Quem não tem nenhuma renda</b> (por exemplo: quem está desempregado, quem cuida da casa ou estudante): uma declaração de ausência de renda, assinada pela própria pessoa',
-  '<b>Entram na soma da renda:</b> salários, aposentadorias, pensões (inclusive pensão alimentícia), benefícios do INSS (como o auxílio-doença), trabalho por conta própria ou bicos frequentes, pró-labore e aluguéis. Vale o valor bruto, isto é, antes dos descontos',
-  '<b>Não entram na soma da renda</b> (mas informe se recebe e traga o comprovante, para que esse valor fique de fora da soma): BPC/LOAS; Bolsa Família; benefícios eventuais da assistência social (por exemplo: auxílio-natalidade, auxílio-funeral, cesta básica); auxílios temporários ou emergenciais do governo; indenizações por danos materiais ou morais; e doações ou ajudas eventuais, que não são recebidas todo mês (Decreto, art. 13, § 2º)'
+/* orientações sobre os comprovantes de renda (anexo do despacho de pendência): [situação, documento] */
+const ORIENT_LINHAS = [
+  ['Trabalha com carteira assinada ou é servidor público', 'Último contracheque (holerite) ou Carteira de Trabalho'],
+  ['Aposentado ou pensionista (INSS ou outro instituto)', 'Extrato do benefício (aplicativo ou site Meu INSS, ou banco onde recebe) ou carta de concessão'],
+  ['Trabalha por conta própria ou faz bicos (por exemplo: diarista, pedreiro, costureira, vendedor, motorista de aplicativo)', 'Declaração assinada dizendo quanto ganha por mês, em média; se tiver, recibos, notas ou extratos bancários. Quem é MEI pode juntar o certificado do MEI'],
+  ['Recebe aluguel ou pensão alimentícia', 'Contrato de aluguel, recibos ou comprovante da pensão'],
+  ['Não tem nenhuma renda (por exemplo: desempregado, quem cuida da casa, estudante)', 'Declaração de ausência de renda, assinada pela própria pessoa']
 ];
-/* orientações sobre renda: só os exemplos que se aplicam (tipos de rendimento da família) e sempre "entram / não entram na soma" */
+const ORIENT_SOMA = '<b>Entram na soma da renda:</b> salários, aposentadorias, pensões (inclusive pensão alimentícia), benefícios do INSS (como o auxílio-doença), trabalho por conta própria ou bicos frequentes, pró-labore e aluguéis.';
+const ORIENT_FORA = '<b>Não entram na soma da renda</b> (mas informe se recebe e traga o comprovante, para que esse valor fique de fora da soma): BPC/LOAS; Bolsa Família; benefícios eventuais da assistência social (por exemplo: auxílio-natalidade, auxílio-funeral, cesta básica); auxílios temporários ou emergenciais do governo; indenizações por danos materiais ou morais; e doações ou ajudas eventuais, que não são recebidas todo mês (Decreto, art. 13, § 2º).';
+/* só as situações que se aplicam (tipos de rendimento da família); renda de alguém desconhecida: todas */
 function orientRenda(){
-  const idx = new Set([5, 6]), CAT = {formal:0, benef:1, informal:2, outro:3, sem:4};
-  if (!s.rend.length || renda().semLinha.length) [0,1,2,3,4].forEach(i => idx.add(i)); /* renda de alguém desconhecida: mostra todos os exemplos */
+  const idx = new Set(), CAT = {formal:0, benef:1, informal:2, outro:3, sem:4};
+  if (!s.rend.length || renda().semLinha.length) [0,1,2,3,4].forEach(i => idx.add(i));
   else s.rend.forEach(x => { const c = TIPOS[x.tipo] && TIPOS[x.tipo].cat; if (c in CAT) idx.add(CAT[c]); });
-  return ORIENT_RENDA.filter((_, i) => idx.has(i));
+  return ORIENT_LINHAS.filter((_, i) => idx.has(i));
 }
 /* expressões por tipo de rendimento (para pedir exatamente o que falta de cada pessoa) */
 const TIPO_DE = {salario:'do salário ou remuneração', aposent:'da aposentadoria', pensao:'da pensão', autonomo:'da renda do trabalho autônomo ou informal', prolabore:'do pró-labore', aluguel:'do aluguel ou renda patrimonial', pensalim:'da pensão alimentícia', benprev:'do benefício previdenciário', outrohab:'do rendimento habitual', bpc:'do BPC', bolsa:'do Bolsa Família', eventual:'do benefício eventual de assistência social', auxtemp:'do auxílio temporário ou emergencial', indeniz:'da indenização', doacao:'da doação eventual', semrenda:'da ausência de renda'};
-/* pendências do contribuinte, uma por tópico: {t: assunto, p: o que deve ser apresentado/informado} */
+/* pendências do contribuinte, uma por assunto: {t: assunto, p: o que apresentar ou informar, com o artigo do Decreto, r: requisito de origem} */
 function pendEsp(){
-  const out = [], add = (t, p, r) => out.push({t, p, r}); /* r = requisito de origem (para o pedido genérico no fim) */
+  const out = [], add = (t, p, r) => out.push({t, p, r});
   const bas = BASICOS.filter(([k]) => s[k] === 'falta').map(([k,l]) => dLc(l));
-  if (bas.length) add('À documentação básica de instrução do pedido', `faz-se necessária a apresentação de: ${bas.join('; ')} – Decreto, art. 20, I`);
-  if (s.b_rel === 'falta' || s.copropr){
-    const rel = s.b_rel === 'falta' ? 'faz-se necessária a anexação da matrícula atualizada do imóvel ou, não havendo, de escritura pública, contrato de compra e venda, termo de posse, contrato de cessão, concessão de direito real de uso ou outro documento idôneo equivalente – Decreto, art. 20, I, “f”' : '';
-    const cop = s.copropr ? 'em caso de copropriedade, deve-se comprovar o atendimento dos requisitos previstos para cada um dos coproprietários' : '';
-    add(s.b_rel === 'falta' ? 'À comprovação da titularidade do imóvel' : 'À copropriedade do imóvel', [rel, cop].filter(Boolean).join('; '));
-  }
-  if (s.c_nucleo === 'falta') add('À composição do núcleo familiar', 'faz-se necessária a entrega de declaração firmada pelo(a) requerente, sob as penas da lei, contendo a identificação de cada componente por meio de seus respectivos documentos');
+  if (bas.length) add('Documentação básica', `${bas.join('; ')} (Decreto, art. 20, I)`);
+  if (s.b_rel === 'falta') add('Titularidade do imóvel', 'matrícula atualizada do imóvel ou, não havendo, escritura pública, contrato de compra e venda, termo de posse, contrato de cessão, concessão de direito real de uso ou outro documento idôneo equivalente (Decreto, art. 20, I, “f”)' + (s.copropr ? '. Por se tratar de copropriedade, comprovar os requisitos de cada um dos coproprietários' : ''));
+  else if (s.copropr) add('Copropriedade', 'comprovação dos requisitos de cada um dos coproprietários');
+  if (s.c_nucleo === 'falta') add('Núcleo familiar', 'declaração assinada pelo(a) requerente, sob as penas da lei, sobre a composição do núcleo familiar, identificando cada pessoa que mora no imóvel, com os respectivos documentos (Decreto, art. 11, § 1º)');
   const cond = CONDIC.filter(([k]) => k !== 'c_nucleo' && s[k] === 'falta').map(([k,l]) => dLc(l));
-  if (cond.length) add('Aos demais documentos exigidos', `faz-se necessária a apresentação de: ${cond.join('; ')} – Decreto, art. 20, II`);
+  if (cond.length) add('Outros documentos', `${cond.join('; ')} (Decreto, art. 20, II)`);
   if (s.r1_ativ === 'mei'){ /* documentos do MEI: pedidos conforme o que o fiscal marcou, qualquer que seja a situação do requisito I */
-    const mc = MEI_COMPL.filter((_, i) => s['mc_' + i]).map(dLc), falta = s.mi_ccmei === 'falta', m = [];
-    if (falta) m.push('do Certificado da Condição de Microempreendedor Individual – CCMEI');
-    if (mc.length) m.push('dos seguintes documentos complementares: ' + mc.join('; '));
-    if (m.length) add('À atividade de microempreendedor individual', 'faz-se necessária a apresentação ' + m.join(', bem como ') + `, nos termos do Decreto, art. 21, VI, ${falta && mc.length ? '“a” e “b”' : falta ? '“a”' : '“b”'}`, 'r1');
+    const mc = MEI_COMPL.filter((_, i) => s['mc_' + i]).map(dLc), falta = s.mi_ccmei === 'falta';
+    if (falta || mc.length) add('Atividade de microempreendedor individual (MEI)', (falta ? 'Certificado da Condição de Microempreendedor Individual (CCMEI)' + (mc.length ? ' e os seguintes documentos complementares: ' : '') : '') + mc.join('; ') + ` (Decreto, art. 21, VI, ${falta && mc.length ? '“a” e “b”' : falta ? '“a”' : '“b”'})`, 'r1');
   }
   if (eff('r4') === 'pend'){
-    if (s.c_apos && s.ap_doc === 'falta') add('À condição de aposentado', 'faz-se necessária a apresentação de um dos seguintes documentos: carta de concessão, extrato de benefício, comprovante de pagamento, contracheque ou declaração ou certidão do órgão previdenciário – Decreto, art. 21, I, “a”', 'r4');
-    if (s.c_pens && s.pe_doc === 'falta') add('À condição de pensionista', 'faz-se necessária a apresentação de um dos seguintes documentos: carta de concessão, extrato de benefício, comprovante de pagamento, contracheque ou declaração ou certidão do órgão pagador – Decreto, art. 21, II, “a”', 'r4');
+    if (s.c_apos && s.ap_doc === 'falta') add('Condição de aposentado', 'um destes documentos – carta de concessão, extrato de benefício, comprovante de pagamento, contracheque ou declaração ou certidão do órgão previdenciário (Decreto, art. 21, I, “a”)', 'r4');
+    if (s.c_pens && s.pe_doc === 'falta') add('Condição de pensionista', 'um destes documentos – carta de concessão, extrato de benefício, comprovante de pagamento, contracheque ou declaração ou certidão do órgão pagador (Decreto, art. 21, II, “a”)', 'r4');
     if (s.c_pne){
       const p = [];
-      if (laudoFalta()) p.push(`laudo médico, relatório multiprofissional ou documento técnico equivalente que ateste o impedimento de longo prazo ou a condição permanente ou duradoura${s.pn_aux ? ', observando-se que o comprovante de auxílio por incapacidade temporária não o substitui' : ''}`);
-      else if (s.pn_perm === 'inconc') p.push('laudo ou relatório complementar que conclua sobre o caráter permanente ou duradouro da condição, conforme o Decreto, art. 10, § 2º');
+      if (laudoFalta()) p.push(`laudo médico, relatório multiprofissional ou documento técnico equivalente que ateste o impedimento de longo prazo ou a condição permanente ou duradoura${s.pn_aux ? ' (o comprovante de auxílio por incapacidade temporária não o substitui)' : ''}`);
+      else if (s.pn_perm === 'inconc') p.push('laudo ou relatório complementar que conclua sobre o caráter permanente ou duradouro da condição (Decreto, art. 10, § 2º)');
       if (s.pn_id === 'falta') p.push('documento de identificação da pessoa com necessidades especiais permanentes');
-      if (s.pn_res === 'falta') p.push('comprovação de residência efetiva dessa pessoa no imóvel');
-      if (p.length) add('À condição de morador com necessidades especiais permanentes', `faz-se necessária a apresentação de: ${p.join('; ')} – Decreto, art. 21, III, “a”`, 'r4');
+      if (s.pn_res === 'falta') p.push('comprovação de que essa pessoa reside efetivamente no imóvel');
+      if (p.length) add('Morador com necessidades especiais permanentes', `${p.join('; ')} (Decreto, art. 21, III, “a”)`, 'r4');
     }
   }
   /* inciso V: pede o esclarecimento do outro imóvel quando o fiscal escolheu "a esclarecer" (ou manteve a pendência mesmo com "consta outro imóvel") */
@@ -716,19 +713,19 @@ function pendEsp(){
   const dcl = (eff('r5') === 'pend' || outroImovel || s.r5_decl === 'falta') && s.r5_decl !== 'ok'; /* declaração do requerente */
   const maisDocs = !!s.r5c_2 && (eff('r5') !== 'nao' || outroImovel); /* outros documentos marcados pelo fiscal */
   if (dcl || outroImovel || maisDocs){
-    const det = (s.r5_det || '').trim(), o5 = (s.obs_r5 || '').trim(), p = [];
-    if (dcl) p.push('declaração firmada pelo(a) requerente, sob as penas da lei, de que não possui outro imóvel');
+    const det = (s.r5_det || '').trim(), o5 = semPonto(s.obs_r5), p = [];
+    if (dcl) p.push('declaração assinada pelo(a) requerente, sob as penas da lei, de que não possui outro imóvel');
     if (outroImovel) p.push(`documentos${s.r5c_0 ? '' : ', como a certidão atualizada do Cartório de Registro de Imóveis,'} que demonstrem que o(a) requerente não possui, a qualquer título, o outro imóvel que consta em seu nome${det ? ', a saber: ' + det : ''}`);
     if (maisDocs) p.push('outros documentos necessários à verificação da inexistência de outra propriedade, domínio útil ou posse sobre imóvel' + (o5 ? ': ' + o5 : ''));
     const compl = outroImovel || maisDocs || !!s.r5c_0;
-    add('À inexistência de outra propriedade em nome do(a) requerente', 'faz-se necessária a apresentação ' + (p.length > 1 ? 'de: ' + p.join('; ') : 'de ' + p[0]) + (s.r5c_0 ? '; a certidão do Serviço Registral Imobiliário da Comarca de Araguari terá a emissão providenciada pela Prefeitura Municipal' : '') + ` – Decreto, ${outroImovel ? 'art. 12 e ' : ''}art. 21, V, ${dcl && compl ? '“a” e “c”' : dcl ? '“a”' : '“c”'}`, 'r5');
+    add('Inexistência de outro imóvel', p.join('; ') + ` (Decreto, ${outroImovel ? 'art. 12 e ' : ''}art. 21, V, ${dcl && compl ? '“a” e “c”' : dcl ? '“a”' : '“c”'})` + (s.r5c_0 ? '. A certidão do Serviço Registral Imobiliário da Comarca de Araguari será providenciada pela Prefeitura' : ''), 'r5');
   }
-  if (s.r5c_1 && (eff('r5') !== 'nao' || outroImovel)) add('À inexistência de propriedade em outras comarcas', 'faz-se necessária a apresentação de certidões do registro de imóveis das demais comarcas em que o(a) requerente possa possuir imóvel – Decreto, art. 21, V, “c”', 'r5');
+  if (s.r5c_1 && (eff('r5') !== 'nao' || outroImovel)) add('Imóveis em outras comarcas', 'certidões do registro de imóveis das demais comarcas em que o(a) requerente possa possuir imóvel (Decreto, art. 21, V, “c”)', 'r5');
   if (rendaPedida()){
     const rd = renda();
-    if (!s.rend.length) add('À composição da renda do núcleo familiar', 'faz-se necessária a entrega de declaração firmada pelo(a) requerente, sob as penas da lei, identificando a renda de cada componente do núcleo familiar, com a anexação dos comprovantes de renda, ou de declaração de ausência de renda de quem não a possui – Decreto, art. 21, IV', 'r6');
+    if (!s.rend.length) add('Renda da família', 'declaração assinada pelo(a) requerente, sob as penas da lei, informando a renda de cada pessoa do núcleo familiar que mora no imóvel, com os comprovantes, ou declaração de ausência de renda de quem não tem renda (Decreto, art. 21, IV)', 'r6');
     else {
-      /* uma frase só: agrupa as pessoas por tipo de rendimento e pelo que falta (comprovação e/ou valor) */
+      /* um item só: agrupa as pessoas por tipo de rendimento e pelo que falta (comprovante e/ou valor) */
       const nome = i => (s.moradores[+i]?.nome || '').trim() || 'Morador ' + (+i + 1);
       const grupos = {}, ordem = [], soValor = {};
       const juntar = (o, k, n) => { (o[k] = o[k] || []); if (!o[k].includes(n)) o[k].push(n); };
@@ -738,20 +735,25 @@ function pendEsp(){
         if (!x.doc){ const k = x.tipo + '|' + (semValor ? 1 : 0); if (!grupos[k]){ grupos[k] = []; ordem.push(k); } juntar(grupos, k, nome(x.m)); }
         else if (semValor) juntar(soValor, x.tipo, nome(x.m));
       });
+      const de = k => `${TIPO_DE[k.split('|')[0]] || 'do rendimento'} de ${dJuntar(grupos[k])}`;
+      const comValor = ordem.filter(k => k.endsWith('|1')).map(de), semValor = ordem.filter(k => k.endsWith('|0')).map(de);
       const p = [];
-      const comp = ordem.map(k => { const [tipo, sv] = k.split('|'); return `${TIPO_DE[tipo] || 'do rendimento'} de ${dJuntar(grupos[k])}${sv === '1' ? ', com o valor mensal bruto' : ''}`; });
-      if (rd.semLinha.length) comp.push(`de renda de ${dJuntar(rd.semLinha.map(n => n.trim()))}, ou declaração de ausência de renda, se for o caso`);
-      if (comp.length) p.push('apresentar comprovação ' + comp.join('; '));
-      Object.keys(soValor).forEach(tipo => p.push(`informar o valor mensal bruto ${TIPO_DE[tipo] || 'do rendimento'} de ${dJuntar(soValor[tipo])}`));
-      if (p.length) add('À composição da renda do núcleo familiar', 'faz-se necessário ' + p.join('; ') + ' – Decreto, art. 21, IV', 'r6');
+      if (comValor.length) p.push('comprovante, com o valor mensal bruto, ' + dJuntar(comValor));
+      if (semValor.length) p.push('comprovante ' + dJuntar(semValor));
+      if (rd.semLinha.length) p.push(`comprovante de renda de ${dJuntar(rd.semLinha.map(n => n.trim()))} ou, se não tiver renda, declaração de ausência de renda`);
+      const so = Object.keys(soValor).map(tipo => `${TIPO_DE[tipo] || 'do rendimento'} de ${dJuntar(soValor[tipo])}`);
+      if (so.length) p.push('informação do valor mensal bruto ' + dJuntar(so));
+      if (p.length) add('Renda da família', p.join('; ') + ' (Decreto, art. 21, IV)', 'r6');
     }
   }
   /* requisito marcado como pendente pelo fiscal sem pedido específico acima: vale o que ele escreveu em "Observação para o despacho" */
-  REQ.forEach(r => { const o = (s['obs_' + r.id] || '').trim(); if (s['st_' + r.id] === 'pend' && o && !out.some(x => x.r === r.id)) add(A_REQ[r.id], o, r.id); });
-  if ((s.destino_obj || '').trim() && !encOrgao()) add(s.destino_obj.trim(), '');
+  REQ.forEach(r => { const o = semPonto(s['obs_' + r.id]); if (s['st_' + r.id] === 'pend' && o && !out.some(x => x.r === r.id)) add(A_REQ[r.id], o, r.id); });
+  if ((s.destino_obj || '').trim() && !encOrgao()) add(semPonto(s.destino_obj), '');
   return out;
 }
-const fmtPend = it => it.p ? `${it.t} (${it.p})` : it.t;
+/* texto simples (painel de conferência e verificações) e item do despacho (assunto em negrito) */
+const fmtPend = it => it.p ? `${it.t}: ${it.p}` : it.t;
+const itemCore = it => it.p ? `<b>${esc(it.t)}:</b> ${esc(semPonto(it.p))}` : esc(cap(semPonto(it.t)));
 /* lista simples (texto), usada na prévia do painel, nos modelos próprios e nas verificações de "há o que pedir" */
 const docsExigir = () => pendEsp().map(fmtPend);
 const DEC_L = {def:'Deferimento', indef:'Indeferimento', pend:'Pendência – notificar o contribuinte (carta)', arq:'Arquivamento (documentação não suprida)', incompleta:'Análise incompleta'};
@@ -818,16 +820,22 @@ function recalc(){
 
 /* ============ despacho ============ */
 const NUM = '\u0001'; /* marcador de numeração dos parágrafos, resolvido em numerar() */
-const RESSALVA = 'Fica ressalvado ao requerente o direito de impugnação ou recurso, nos termos da Lei Complementar nº 203, de 2022 (Decreto, art. 38).';
+const RESSALVA = 'Fica ressalvado ao requerente o direito de impugnação ou recurso, nos termos da LC nº 203/2022 (Decreto, art. 38).';
+const COMPET = 'Dessa forma, no que diz respeito à competência deste Departamento de Fiscalização de Rendas, constatou-se que ';
+const CARGO = 'Auditor Fiscal';
 const dP = t => `<p class="n">${s.numerar ? NUM + '. ' : ''}${t}</p>`; /* numeração dos parágrafos: opcional (o modelo do departamento não numera) */
-const dL = (arr, vazio) => arr.length ? arr.map((x,i) => `<p class="n">${String.fromCharCode(97 + i)}) ${x}.</p>`).join('') : (vazio ? `<p class="n">${vazio}</p>` : ''); /* itens a), b), c)… */
-const dB = t => `<p class="b"><span class="bl">⦁</span> ${t}</p>`;
-const dBs = (arr, vazio) => arr.length ? arr.map((x,i) => dB(x + (i === arr.length - 1 ? '.' : ';'))).join('') : (vazio ? dB(vazio) : '');
+const dPs = t => `<p class="n">${t}</p>`; /* parágrafo nunca numerado (anexo) */
+const dH = t => s.sem_titulos ? '' : `<p class="h">${t}</p>`; /* títulos das seções: podem ser ocultados nas configurações */
+const dI = (arr, vazio) => (arr.length ? arr : (vazio ? [vazio] : [])).map((x,i) => `<p class="i"><span class="lt">${String.fromCharCode(97 + i)})</span> ${x}.</p>`).join(''); /* itens a), b), c)… com recuo */
+const dB = t => `<p class="b"><span class="lt">•</span> ${t}</p>`;
+const dR = t => `<p class="r">${t}</p>`; /* quadro "Em resumo" */
 const dLc = t => /^[A-ZÁÉÍÓÚÂÊÔÃÕÇ]{2}/.test(t) ? t : t.charAt(0).toLowerCase() + t.slice(1);
+const cap = t => t ? t.charAt(0).toUpperCase() + t.slice(1) : '';
+const semPonto = t => String(t || '').trim().replace(/[\s.;:,]+$/, '');
 const dMark = t => `<mark>[PREENCHER]</mark>${t ? ' ' + t : ''}`;
 const dJuntar = a => a.length < 2 ? (a[0] || '') : a.slice(0, -1).join(', ') + ' e ' + a[a.length - 1];
 const numerar = h => { let n = 0; return h.replace(new RegExp(NUM, 'g'), () => String(++n)); };
-const assinatura = () => `<p class="c">Araguari, ${new Date().toLocaleDateString('pt-BR', {weekday:'long', day:'numeric', month:'long', year:'numeric'})}.</p><p class="c">${ph(s.fiscal)}</p><p class="c">Matrícula: ${ph(s.matricula)}</p>`;
+const assinatura = () => `<p class="c">Araguari, ${new Date().toLocaleDateString('pt-BR', {weekday:'long', day:'numeric', month:'long', year:'numeric'})}.</p><p class="sig"><b>${(s.fiscal || '').trim() ? esc(s.fiscal.trim().toUpperCase()) : dMark('')}</b></p><p class="c">${CARGO} – Matrícula ${ph((s.matricula || '').trim())}</p>`;
 
 /* ---- numeração do despacho: sequência por ano, guardada no navegador e sincronizada com os despachos já registrados ---- */
 const DESP_SEQ_KEY = 'iptuDespSeq';
@@ -881,26 +889,66 @@ function despUI(){
 }
 
 /* ---- peças do despacho ---- */
-function ementaBloco(key, assunto){
-  const nome = (s.requerente || '').trim().toUpperCase();
-  return `<p class="c" style="margin-bottom:13.8pt"><b>DESPACHO DECISÓRIO Nº ${despRotulo(key)}</b></p>` +
-    `<p class="l"><b>PROCESSO Nº:</b> ${ph(s.numero)}</p><p class="l"><b>INTERESSADO:</b> ${nome ? esc(nome) : dMark('')}</p><p class="l"><b>CNPJ/CPF:</b> ${ph(s.cpf)}</p><p class="l" style="margin-bottom:13.8pt"><b>ASSUNTO:</b> ISENÇÃO DE IPTU${s.tipo === 'renov' ? ' – RENOVAÇÃO' : ''}</p>`;
+const RES_ASSUNTO = {def:'DEFERIMENTO', indef:'INDEFERIMENTO', tri:'INDEFERIMENTO', arq:'ARQUIVAMENTO'};
+function ementaBloco(key){
+  const nome = (s.requerente || '').trim().toUpperCase(), ex = String(s.exercicio ?? '').trim();
+  const res = key === 'pend' ? (encOrgao() ? 'ENCAMINHAMENTO PARA CONSULTA TÉCNICA' : 'SOLICITAÇÃO DE DOCUMENTOS E INFORMAÇÕES') : RES_ASSUNTO[key];
+  const assunto = (s.tipo === 'renov' ? 'RENOVAÇÃO DE ISENÇÃO DE IPTU' : 'ISENÇÃO DE IPTU') + (ex ? ' – EXERCÍCIO DE ' + esc(ex) : '') + (res ? ' – ' + res : '');
+  return `<p class="t"><b>DESPACHO DECISÓRIO Nº ${despRotulo(key)}</b></p>` +
+    `<p class="l"><b>PROCESSO Nº:</b> ${ph(s.numero)}</p><p class="l"><b>INTERESSADO:</b> ${nome ? esc(nome) : dMark('')}</p><p class="l"><b>CPF:</b> ${ph(s.cpf)}</p><p class="l"><b>ASSUNTO:</b> ${assunto}</p>`;
 }
 function sintese(){
-  const ref = (s.cci || '').trim() ? `CCI nº ${esc(s.cci.trim())}` : ((s.inscricao || '').trim() ? `inscrição imobiliária nº ${esc(s.inscricao.trim())}` : dMark(''));
-  const extra = ((s.cci || '').trim() && (s.inscricao || '').trim()) ? ` (inscrição imobiliária nº ${esc(s.inscricao.trim())}${(s.endereco || '').trim() ? ', situado em ' + esc(s.endereco.trim()) : ''})` : ((s.endereco || '').trim() ? ` (situado em ${esc(s.endereco.trim())})` : '');
-  return dP(`Uma vez recebido o processo nº ${ph(s.numero)}, restou identificado tratar-se de pedido de ${s.tipo === 'renov' ? 'renovação de ' : ''}ISENÇÃO do Imposto sobre a Propriedade Predial e Territorial Urbana (IPTU), referente ao ano-calendário de ${ph(s.exercicio)} e ao imóvel de ${ref}${extra}, pelo(a) requerente ${(s.requerente || '').trim() ? esc(s.requerente.trim().toUpperCase()) : dMark('')}${s.protocolo ? ', com protocolo em ' + dbr(s.protocolo) : ''}.`);
+  const cci = (s.cci || '').trim(), insc = (s.inscricao || '').trim(), end = (s.endereco || '').trim(), req = (s.requerente || '').trim();
+  const imovel = cci ? `CCI nº ${esc(cci)}${insc ? ` (inscrição imobiliária nº ${esc(insc)})` : ''}` : (insc ? `inscrição imobiliária nº ${esc(insc)}` : dMark(''));
+  return dP(`Uma vez recebido o processo nº ${ph(s.numero)}, restou identificado tratar-se de pedido de ${s.tipo === 'renov' ? 'renovação da ' : ''}isenção do Imposto sobre a Propriedade Predial e Territorial Urbana (IPTU) do exercício de ${ph(String(s.exercicio ?? '').trim())}, referente ao imóvel de ${imovel}${end ? ', situado em ' + esc(end) : ''}, formulado por ${req ? esc(req.toUpperCase()) : dMark('')}${s.protocolo ? ' e protocolado em ' + dbr(s.protocolo) : ''}.`);
 }
+/* quadro dos requisitos: nome curto, situação e o que foi verificado */
+const REQ_CURTO = {r1:'I – Uso somente como moradia', r2:'II – Moradia de uma só família', r3:'III – Imóvel edificado', r4:'IV – Proprietário aposentado ou pensionista, ou morador com necessidades especiais', r5:'V – Sem outro imóvel', r6:'VI – Renda familiar de até 1,5 salário-mínimo'};
+const stD = v => v === 'ok' ? 'apresentado' : v === 'falta' ? 'ausente ou insuficiente' : 'não conferido';
+const fmtV = n => (n || 0).toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2});
+const quadroRendaVisivel = () => s.rend.length > 1; /* com uma só linha de renda, o valor já está no quadro dos requisitos */
+function evidReq(rd){
+  const ev = {}, qr = quadroRendaVisivel();
+  let mei = '';
+  if (s.r1_ativ === 'mei'){ const f = MEI_ITENS.filter(([k]) => s[k] !== 'ok').map(([k,l]) => `${dLc(l.replace(/\s*\(.*\)$/,''))} (${LBL[s[k]||'na'].toLowerCase()})`); mei = (s.mi_ccmei === 'ok' ? '' : `; CCMEI ${stD(s.mi_ccmei)}`) + (f.length ? '; condições do art. 14 do Decreto não confirmadas ou não atendidas: ' + f.join(', ') : '; atendidas as condições do art. 14 do Decreto'); }
+  ev.r1 = ({nao:'sem atividade econômica no imóvel', mei:'atividade de microempreendedor individual do proprietário (LC nº 203/2022, art. 113, § 1º; Decreto, art. 14)' + mei, outra:'atividade econômica ou uso incompatível com moradia (Decreto, art. 5º)'}[s.r1_ativ]) || '';
+  const t2 = ART6.filter(([k]) => s[k]).map(([k,l]) => dLc(l.replace(/\s*\(.*\)$/,'')));
+  ev.r2 = t2.length ? 'imóvel ' + t2.join('; ') + ' (Decreto, art. 6º, parágrafo único)' : (s.r2_conf === 'sim' ? 'uso unifamiliar confirmado' : '');
+  ev.r3 = [{sim:'Coeficiente de Edificação igual ou superior a 0,15', nao:'Coeficiente de Edificação inferior a 0,15 (LC nº 203/2022, art. 95, § 2º)'}[s.ce] || '', s.hab === 'sim' ? 'construção em condições de uso' : s.hab === 'nao' ? 'construção sem condições de uso (LC nº 203/2022, art. 96, parágrafo único)' : '', s.r3_peq ? 'indício de construção sem uso residencial efetivo (Decreto, art. 7º, § 3º)' : ''].filter(Boolean).join('; ');
+  const docT = v => docOk(v) ? esc(dLc(v)) : v === 'falta' ? 'comprovação não apresentada' : 'comprovação não conferida';
+  const x = [];
+  if (s.c_apos) x.push(`proprietário aposentado (${docT(s.ap_doc)})`);
+  if (s.c_pens) x.push(`proprietário pensionista (${docT(s.pe_doc)}${s.pe_obito ? '; certidão de óbito' : ''}${s.pe_origem ? '; documento de origem da pensão' : ''})`);
+  if (s.c_pne){ const sub = DOC_PNE_SUBST.filter((l,i) => s['ps_'+i]); x.push(`morador com necessidades especiais permanentes (laudo ou relatório: ${docOk(s.pn_laudo) ? esc(dLc(s.pn_laudo)) : s.pn_laudo === 'falta' ? 'não apresentado' : 'não conferido'}; identificação: ${stD(s.pn_id)}; residência efetiva: ${stD(s.pn_res)}; caráter permanente ou duradouro: ${{sim:'conclusivo', inconc:'não conclusivo', temp:'condição temporária (Decreto, art. 10, § 5º)'}[s.pn_perm] || 'não analisado'}${sub.length ? '; documentos adicionais: ' + sub.map(l => esc(dLc(l))).join(', ') : ''}${s.pn_saude ? '; encaminhado à Secretaria Municipal de Saúde (Decreto, art. 10, § 6º)' : ''})`); }
+  ev.r4 = x.join('; ');
+  ev.r5 = (s.r5_decl || s.r5_cons) ? `declaração do requerente ${{ok:'apresentada', falta:'ausente ou insuficiente'}[s.r5_decl] || 'não conferida'}; ${{nenhum:'nenhum outro imóvel no Cadastro de Contribuintes Imobiliário', outro:'consta outro imóvel no Cadastro de Contribuintes Imobiliário', esclarecer:'consta outro imóvel no Cadastro de Contribuintes Imobiliário, a ser esclarecido pelo requerente'}[s.r5_cons] || 'consulta ao Cadastro de Contribuintes Imobiliário não realizada'}${s.r5_det ? ' (' + esc(s.r5_det) + ')' : ''}${s.r5_cons === 'outro' ? ' (Decreto, art. 12)' : ''}` : '';
+  const lac = [...rd.semLinha.map(n => `${esc(n)} sem rendimento nem declaração de ausência de renda`), ...rd.semValor.map(n => `valor não informado: ${esc(n)}`), ...rd.semDoc.map(n => `sem documento comprobatório: ${esc(n)}`)];
+  if (!s.rend.length) ev.r6 = 'rendimentos da família não informados';
+  else ev.r6 = `renda familiar de ${brl(rd.total)}${rd.incompleta ? ' (apenas valores informados)' : ''}` + (rd.lim ? `, ${rd.total <= rd.lim ? 'dentro do' : 'acima do'} limite de ${brl(rd.lim)}${qr ? ' (quadro abaixo)' : ` (1,5 × salário-mínimo de ${brl(rd.sm)})`}` : '; ' + dMark('informar o salário-mínimo')) + (rd.excl && !qr ? `; não computados ${brl(rd.excl)} (Decreto, art. 13, § 2º)` : '') + (lac.length ? `; apuração incompleta: ${lac.join('; ')}` : '');
+  if (eff('r6') === 'nao' && !(rd.lim && rd.hasData && rd.total > rd.lim && !s.st_r6) && !(s.obs_r6 || '').trim()) ev.r6 += '; ' + dMark('indicar o motivo');
+  REQ.forEach(r => { const o = semPonto(s['obs_'+r.id]); ev[r.id] = cap([ev[r.id], o && esc(o)].filter(Boolean).join('; ')); });
+  return ev;
+}
+function quadroReq(ids, rd){
+  const ev = evidReq(rd);
+  return `<table><tr><th data-w="3300">Requisito (Decreto, art. 4º)</th><th data-w="1250" data-a="center">Situação</th><th data-w="4521">Como foi verificado</th></tr>` +
+    ids.map(id => { const e = eff(id); return `<tr><td>${REQ_CURTO[id]}</td><td data-a="center">${e === 'nao' ? '<b>' + LBL[e] + '</b>' : LBL[e]}</td><td>${ev[id] || (e === 'na' ? dMark('') : '–')}</td></tr>`; }).join('') + `</table>`;
+}
+/* quadro de renda: quem mora no imóvel, o que recebe, se entra na soma, total e limite */
 function tabelaRenda(rd){
-  const vazio = '<b>Não informado</b>';
-  return `<table><tr><th data-w="1650">Morador</th><th data-w="850" data-a="center">Núcleo familiar</th><th data-w="2500">Rendimento</th><th data-w="1250" data-a="right">Valor bruto (R$)</th><th data-w="900" data-a="center">Computa?</th><th data-w="1921">Documento</th></tr>` +
-    s.rend.map(r => { const m = s.moradores[+r.m] || {}; const t = TIPOS[r.tipo]; const semV = String(r.valor ?? '').trim() === '' && r.tipo !== 'semrenda';
-      return `<tr><td>${esc(m.nome || 'Morador ' + (+r.m+1))}${m.parentesco ? ' (' + esc(m.parentesco) + ')' : ''}</td><td data-a="center">${m.nucleo ? 'Sim' : 'Não'}</td><td>${esc(t.l)}</td><td data-a="right">${semV ? vazio : (num(r.valor)||0).toLocaleString('pt-BR',{minimumFractionDigits:2})}</td><td data-a="center">${m.nucleo ? (t.comp ? 'Sim' : 'Não') : 'Não'}</td><td>${r.doc ? esc(r.doc) : '<b>Não apresentado</b>'}</td></tr>`; }).join('') +
-    s.moradores.map((m,i) => [m,i]).filter(([m,i]) => m.nucleo && !s.rend.some(r => +r.m === i)).map(([m,i]) =>
-      `<tr><td>${esc(m.nome || 'Morador ' + (i+1))}${m.parentesco ? ' (' + esc(m.parentesco) + ')' : ''}</td><td data-a="center">Sim</td><td>${vazio}</td><td data-a="right">${vazio}</td><td data-a="center">–</td><td>${vazio}</td></tr>`).join('') +
-    `<tr><th colspan="3" data-w="4999" data-a="center">Total computado</th><th data-a="right" data-w="1250">${rd.total.toLocaleString('pt-BR',{minimumFractionDigits:2})}</th><th data-w="900"></th><th data-w="1921"></th></tr></table>`;
+  const ni = '<b>Não informado</b>';
+  const quem = (m, i) => esc(m.nome || 'Morador ' + (i+1)) + (m.parentesco ? ' (' + esc(dLc(m.parentesco)) + ')' : '');
+  const linhas = s.rend.map(r => {
+    const i = +r.m, m = s.moradores[i] || {}, t = TIPOS[r.tipo] || {}, semV = String(r.valor ?? '').trim() === '' && r.tipo !== 'semrenda';
+    const soma = !m.nucleo ? 'Não (fora do núcleo familiar)' : t.comp ? 'Sim' : 'Não (Decreto, art. 13, § 2º)';
+    return `<tr><td>${quem(m, i)}</td><td>${esc(t.s || '')}</td><td data-a="right">${semV ? ni : fmtV(num(r.valor))}</td><td data-a="center">${soma}</td><td>${r.doc ? esc(r.doc) : '<b>Não apresentado</b>'}</td></tr>`;
+  }).concat(s.moradores.map((m,i) => [m,i]).filter(([m,i]) => m.nucleo && !s.rend.some(r => +r.m === i)).map(([m,i]) =>
+    `<tr><td>${quem(m, i)}</td><td>${ni}</td><td data-a="right">${ni}</td><td data-a="center">–</td><td>${ni}</td></tr>`));
+  return `<table><tr><th data-w="2400">Morador</th><th data-w="2300">Rendimento</th><th data-w="1250" data-a="right">Valor bruto (R$)</th><th data-w="1300" data-a="center">Entra na soma?</th><th data-w="1821">Documento</th></tr>${linhas.join('')}` +
+    `<tr><td colspan="2"><b>Renda familiar computada</b></td><td data-a="right"><b>${fmtV(rd.total)}</b></td><td colspan="2"></td></tr>` +
+    (rd.lim ? `<tr><td colspan="2">Limite: 1,5 × salário-mínimo de ${brl(rd.sm)}</td><td data-a="right">${fmtV(rd.lim)}</td><td colspan="2"></td></tr>` : '') + `</table>`;
 }
-/* motivo concreto de cada requisito não atendido (só o que sustenta o indeferimento) */
+/* motivo concreto de cada requisito não atendido (lista {{motivos}} dos modelos próprios) */
 function motivoReq(r, rd){
   const id = r.id, o = (s['obs_'+id] || '').trim(), x = [];
   if (id === 'r1'){
@@ -926,186 +974,141 @@ function motivoReq(r, rd){
   if (o) x.push(esc(o));
   return `inciso ${r.n} – ${esc(dLc(r.t))}: ` + (x.length ? x.join('; ') : dMark('indicar o motivo.'));
 }
-const JUNTAR_BLOCOS = b => b.ementa + b.objeto + b.contexto + b.fatos + b.fundamentacao + b.analise + b.conclusao + b.encaminhamento;
-const BLOCOS_VAZIOS = () => ({ementa:'', contexto:'', objeto:'', fatos:'', fundamentacao:'', analise:'', conclusao:'', encaminhamento:''});
+const BLOCOS_VAZIOS = () => ({ementa:'', objeto:'', contexto:'', fatos:'', fundamentacao:'', conclusao:'', encaminhamento:'', resumo:'', anexo:''});
+/* ordem fixa: cabeçalho, pedido, contexto normativo, análise, decisão (ou notificação/encaminhamento); a assinatura e o anexo entram em gerarParecer() */
+function juntarBlocos(b, dec){
+  const sec = (t, corpo) => corpo ? dH(t) + corpo : '';
+  const tConc = dec === 'pend' ? (encOrgao() ? 'DO ENCAMINHAMENTO' : 'DA NOTIFICAÇÃO') : 'DA DECISÃO';
+  return b.ementa + sec('DO PEDIDO', b.objeto) + sec('DO CONTEXTO NORMATIVO', b.contexto) + sec('DA ANÁLISE', b.fatos + b.fundamentacao) + sec(tConc, b.conclusao + b.encaminhamento + b.resumo);
+}
 const MOTIVO_TRI = 'não atendido o requisito do inciso IV do art. 4º do Decreto Municipal nº 1.410/2026 (proprietário aposentado ou pensionista, ou morador com necessidades especiais permanentes)';
-const dH = t => `<p class="h">${t}</p>`;
-const completo = () => s.detalhe !== 'enxuto'; /* padrão: completo; "enxuto" é opcional */
-const DH = (titulo, corpo) => corpo ? (s.titulos ? dH(titulo) : '') + corpo : ''; /* título de seção: opcional */
-const stD = v => v === 'ok' ? 'apresentado' : v === 'falta' ? 'ausente ou insuficiente' : 'não conferido';
-const FUND_BASE = 'O art. 113 da LC nº 203/2022 concede a isenção do IPTU ao imóvel que cumpra, ao mesmo tempo, os requisitos regulamentados pelo art. 4º do Decreto nº 1.410/2026: moradia de uma só família, em imóvel edificado, de proprietário aposentado ou pensionista (ou com morador com necessidades especiais permanentes), sem outro imóvel e com renda familiar de até 1,5 (um inteiro e meio) salário-mínimo. A falta de qualquer um deles impede a isenção (§ 1º).';
-const FUND_CUMUL = 'O art. 113 da LC nº 203/2022, regulamentado pelo art. 4º do Decreto nº 1.410/2026, concede a isenção do IPTU ao imóvel que cumpra, ao mesmo tempo, todos os requisitos acima; a falta de qualquer um impede a isenção (§ 1º).';
 const TESE_PNE = 'O recebimento de auxílio por incapacidade temporária (antigo auxílio-doença), ainda que por mais de 2 (dois) anos, não gera presunção de deficiência. O art. 10 do Decreto exige impedimento de longo prazo ou condição permanente ou duradoura, comprovado por avaliação médica ou multiprofissional (§ 2º), na forma da Lei Federal nº 13.146/2015 (§ 1º), que considera a interação do impedimento com barreiras capazes de obstruir a participação plena e efetiva da pessoa na sociedade, em igualdade de condições com as demais; não se enquadram afastamentos transitórios ou situações sem indicação de permanência (§ 5º).';
 const fatoAuxTxt = () => `Para comprovar a condição de morador com necessidades especiais permanentes, foi apresentado comprovante de auxílio por incapacidade temporária (antigo auxílio-doença)${docOk(s.pn_laudo) && s.pn_perm === 'sim' ? '' : ', sem laudo médico ou relatório multiprofissional que ateste impedimento de longo prazo'}.`;
 
-/* parágrafo inicial (contexto normativo): texto editável, guardado no navegador; versão completa e versão curta (cartas ao contribuinte) */
+/* parágrafo inicial (contexto normativo): texto editável, guardado no navegador */
 const ABERTURA_COMPLETA = 'De início, relata-se que esta auditoria fiscal teve acesso ao parecer jurídico emitido pela Procuradoria-Geral do Município (PGM), sem numeração, em 25 de junho de 2026, o qual concluiu que a isenção estabelecida pela Lei Ordinária nº 5.341/2014 foi tacitamente revogada pela publicação e vigência exaustiva da Lei Complementar nº 203/2022. Em seguida, foi publicado o Decreto nº 1.410, de 30 de junho de 2026, que “regulamenta o parágrafo único do art. 10 da Lei Complementar nº 203, de 22 de dezembro de 2022, para disciplinar os requisitos, a forma de comprovação, o prazo de validade e o procedimento para reconhecimento da isenção do Imposto sobre a Propriedade Predial e Territorial Urbana - IPTU, prevista nos arts. 113 e 114 do Código Tributário do Município de Araguari”.';
 let aberturaCfg = {usar:true, completa:''};
 try { Object.assign(aberturaCfg, JSON.parse(localStorage.getItem('iptuAbertura') || '{}')); } catch(e){}
 const aberturaSalvar = () => { try { localStorage.setItem('iptuAbertura', JSON.stringify(aberturaCfg)); } catch(e){} };
 const aberturaTxt = () => aberturaCfg.usar === false ? '' : ((aberturaCfg.completa || '').trim() || ABERTURA_COMPLETA);
-const contextoBloco = () => { const t = aberturaTxt(); return t ? DH('DO CONTEXTO NORMATIVO', dP(esc(t))) : ''; };
+const contextoBloco = () => { const t = aberturaTxt(); return t ? dP(esc(t)) : ''; };
 
-/* modo completo: quadro dos seis requisitos, em linguagem simples, cada um com o que foi verificado */
-function linhasReq(rd){
-  const TIT = TIT_REQ;
-  const ev = {};
-  let meiTxt = '';
-  if (s.r1_ativ === 'mei'){ const f = MEI_ITENS.filter(([k]) => s[k] !== 'ok').map(([k,l]) => `${dLc(l.replace(/\s*\(.*\)$/,''))} (${LBL[s[k]||'na'].toLowerCase()})`); meiTxt = (s.mi_ccmei === 'ok' ? '' : `; CCMEI ${stD(s.mi_ccmei)}`) + (f.length ? '; condições do art. 14 do Decreto não confirmadas ou não atendidas: ' + f.join(', ') : '; atendidas as condições do art. 14 do Decreto'); }
-  ev.r1 = ({nao:'não há atividade econômica no imóvel', mei:'há atividade de microempreendedor individual do proprietário (LC nº 203/2022, art. 113, § 1º; Decreto, art. 14)' + meiTxt, outra:'há atividade econômica ou uso incompatível com moradia (Decreto, art. 5º)'}[s.r1_ativ]) || '';
-  const t2 = ART6.filter(([k]) => s[k]).map(([k,l]) => dLc(l.replace(/\s*\(.*\)$/,'')));
-  ev.r2 = t2.length ? 'o imóvel está ' + t2.join('; ') + ' (Decreto, art. 6º, parágrafo único)' : (s.r2_conf === 'sim' ? 'uso unifamiliar confirmado' : '');
-  const ce = {sim:'igual ou superior a 0,15', nao:'inferior a 0,15'}[s.ce] || '';
-  ev.r3 = [ce && `Coeficiente de Edificação ${ce} (LC nº 203/2022, art. 95, § 2º)`, s.hab === 'sim' ? 'construção em condições de uso' : s.hab === 'nao' ? 'construção sem condições de uso (LC nº 203/2022, art. 96, parágrafo único)' : '', s.r3_peq ? 'indício de construção sem uso residencial efetivo (Decreto, art. 7º, § 3º)' : ''].filter(Boolean).join('; ');
-  const x = [];
-  if (s.c_apos) x.push(`aposentado (${docOk(s.ap_doc) ? esc(dLc(s.ap_doc)) : s.ap_doc === 'falta' ? 'sem comprovação apresentada' : 'comprovação não conferida'})`);
-  if (s.c_pens) x.push(`pensionista (${docOk(s.pe_doc) ? esc(dLc(s.pe_doc)) : s.pe_doc === 'falta' ? 'sem comprovação apresentada' : 'comprovação não conferida'}${s.pe_obito ? '; certidão de óbito' : ''}${s.pe_origem ? '; documento de origem da pensão' : ''})`);
-  if (s.c_pne){ const sub = DOC_PNE_SUBST.filter((l,i) => s['ps_'+i]); x.push(`morador com necessidades especiais permanentes (laudo/relatório: ${docOk(s.pn_laudo) ? esc(dLc(s.pn_laudo)) : s.pn_laudo === 'falta' ? 'não apresentado' : 'não conferido'}; identificação: ${stD(s.pn_id)}; residência efetiva: ${stD(s.pn_res)}; caráter permanente ou duradouro: ${{sim:'conclusivo', inconc:'não conclusivo', temp:'condição temporária – Decreto, art. 10, § 5º'}[s.pn_perm] || 'não analisado'}${sub.length ? '; documentos adicionais: ' + sub.map(l => esc(dLc(l))).join(', ') : ''}${s.pn_saude ? '; encaminhado à Secretaria Municipal de Saúde – Decreto, art. 10, § 6º' : ''})`); }
-  ev.r4 = x.join('; ');
-  ev.r5 = (s.r5_decl || s.r5_cons) ? `declaração do requerente: ${{ok:'apresentada', falta:'ausente ou insuficiente'}[s.r5_decl] || 'não conferida'}; consulta ao Cadastro de Contribuintes Imobiliário: ${{nenhum:'nenhum outro imóvel localizado', outro:'consta outro imóvel', esclarecer:'consta outro imóvel, a ser esclarecido pelo requerente'}[s.r5_cons] || 'não realizada'}${s.r5_det ? ' (' + esc(s.r5_det) + ')' : ''}` : '';
-  /* renda: acompanha a situação efetiva do requisito (inclusive a escolha do fiscal) e os campos em branco */
-  const e6 = eff('r6'), o6 = (s.obs_r6 || '').trim();
-  const lacunas = [...rd.semLinha.map(n => `${esc(n)} sem rendimento nem declaração de ausência de renda`), ...rd.semValor.map(n => `valor não informado: ${esc(n)}`), ...rd.semDoc.map(n => `sem documento comprobatório: ${esc(n)}`)];
-  if (!s.rend.length) ev.r6 = 'não foram lançados rendimentos dos integrantes do núcleo familiar';
-  else {
-    ev.r6 = `renda somada de ${brl(rd.total)}${rd.incompleta ? ' (apenas valores informados)' : ''}` + (rd.lim ? `, ${rd.total <= rd.lim ? 'dentro do' : 'acima do'} limite de ${brl(rd.lim)} (1,5 salário-mínimo, de ${brl(rd.sm)}; Decreto, art. 13)` : ', ' + dMark('informar o salário-mínimo')) + (rd.excl ? `; não computados ${brl(rd.excl)} (Decreto, art. 13, § 2º)` : '') + (lacunas.length ? `; apuração incompleta: ${lacunas.join('; ')}` : '');
-  }
-  if (e6 === 'nao' && !(rd.lim && rd.hasData && rd.total > rd.lim && !s.st_r6) && !o6) ev.r6 += '; ' + dMark('indicar o motivo');
-  return REQ.map(r => {
-    const e = eff(r.id), o = (s['obs_'+r.id] || '').trim();
-    const evid = [ev[r.id], o && esc(o)].filter(Boolean).join('; ');
-    return `${r.n} – ${TIT[r.id]}: <b>${LBL[e].toLowerCase()}</b>${evid ? ' – ' + evid : (e === 'na' ? ' ' + dMark('') : '')}`;
-  });
-}
-/* modo completo: fatos do processo (documentos, quadro dos requisitos, renda e efeitos no tempo) */
-function fatosCompletos(rd, pres, aus, auxPne, ex){
-  const basOk = BASICOS.every(([k]) => s[k] === 'ok') && s.b_rel === 'ok';
-  const extras = CONDIC.filter(([k]) => s[k] === 'ok').map(([k,l]) => esc(dLc(l)));
-  let h = dP(`Dessa forma, no que diz respeito à competência deste Departamento de Fiscalização de Rendas, constatou-se que ` + (basOk ? `foram apresentados os documentos básicos exigidos (Decreto, art. 20, I)${extras.length ? ', além de: ' + extras.join('; ') : ''}` : `foram apresentados os seguintes documentos: ${pres.length ? esc(pres.join('; ')) : dMark('')}`) + `.${aus.length ? ' Constam como ausentes ou insuficientes: ' + esc(aus.join('; ')) + '.' : ''}`);
-  h += dP('Verificou-se, quanto a cada requisito do art. 4º do Decreto nº 1.410/2026, que:') + dBs(linhasReq(rd));
-  if (s.rend.length > 1) h += tabelaRenda(rd);
-  if (auxPne) h += dP(fatoAuxTxt());
-  if (ex === ANO_TRANSICAO){
-    const t = {sim:`Os requisitos já estavam preenchidos em 1º de janeiro de ${ANO_TRANSICAO}, data do fato gerador (Decreto, art. 34, § 1º).`, nao:`Os requisitos surgiram somente após 1º de janeiro de ${ANO_TRANSICAO} (Decreto, art. 34, § 4º), o que limita os efeitos ao exercício seguinte.`}[s.t_ini] || dMark(`não foi informado se os requisitos já estavam preenchidos em 1º de janeiro de ${ANO_TRANSICAO}.`);
-    h += dP(`${t}${s.t_doc === 'sim' ? ' Os documentos emitidos depois dessa data permitem concluir que a situação já existia (Decreto, art. 34, §§ 2º e 3º).' : s.t_doc === 'nao' ? ' Os documentos emitidos depois dessa data <b>não</b> permitem concluir que a situação já existia (Decreto, art. 34, § 3º).' : ''}${s.t_pago === 'sim' ? ` O pagamento, total ou parcial, do IPTU/${ANO_TRANSICAO} não impede a isenção; havendo deferimento, o valor pago a mais pode ser restituído ou compensado (Decreto, art. 34, §§ 5º e 6º).` : ''}`);
-  }
+/* parágrafos jurídicos que dependem do caso (MEI, auxílio por incapacidade temporária, requerente não proprietário) */
+function fundExtra(cond, auxPne){
+  let h = '';
+  if (s.r1_ativ === 'mei') h += dP('O § 1º do art. 113 da LC nº 203/2022 e o art. 14 do Decreto admitem a isenção de imóvel utilizado também para atividade de microempreendedor individual, desde que atendidos os requisitos do caput do art. 113 e as condições do art. 14.');
+  if (auxPne) h += dP(fatoAuxTxt()) + dP(TESE_PNE);
+  if (s.condicao && s.condicao !== 'prop') h += dP(`Registra-se que o requerente figura como ${cond}, e não como proprietário do imóvel (LC nº 203/2022, art. 113, caput).`);
   return h;
 }
-function fundCompleta(dec, auxPne, cond){
-  let h = dP(FUND_CUMUL);
-  if (s.r1_ativ === 'mei') h += dP('O § 1º do art. 113 da LC nº 203/2022 e o art. 14 do Decreto admitem a isenção de imóvel utilizado também para atividade de microempreendedor individual, desde que atendidos os requisitos do caput do art. 113 e as condições do art. 14.');
-  if (auxPne) h += dP(TESE_PNE);
-  if (s.condicao && s.condicao !== 'prop') h += dP(`Registra-se que o requerente figura como ${cond}, e não como proprietário do imóvel (LC nº 203/2022, art. 113, caput).`);
+/* deferimento no ano de transição: requisitos em 1º de janeiro (Decreto, art. 34) */
+function art34(){
+  if (num(s.exercicio) !== ANO_TRANSICAO) return '';
+  const t = {sim:`Os requisitos já estavam preenchidos em 1º de janeiro de ${ANO_TRANSICAO}, data do fato gerador (Decreto, art. 34, § 1º).`, nao:`Os requisitos surgiram somente após 1º de janeiro de ${ANO_TRANSICAO} (Decreto, art. 34, § 4º), o que limita os efeitos ao exercício seguinte.`}[s.t_ini] || dMark(`informar se os requisitos já estavam preenchidos em 1º de janeiro de ${ANO_TRANSICAO}.`);
+  return dP(`${t}${s.t_doc === 'sim' ? ' Os documentos emitidos depois dessa data permitem concluir que a situação já existia (Decreto, art. 34, §§ 2º e 3º).' : s.t_doc === 'nao' ? ' Os documentos emitidos depois dessa data <b>não</b> permitem concluir que a situação já existia (Decreto, art. 34, § 3º).' : ''}${s.t_pago === 'sim' ? ` O pagamento, total ou parcial, do IPTU/${ANO_TRANSICAO} não impede a isenção; o valor pago a mais pode ser restituído ou compensado (Decreto, art. 34, §§ 5º e 6º).` : ''}`);
+}
+/* análise do deferimento e do indeferimento: documentos, quadro dos requisitos e quadro de renda */
+function analiseReq(dec, rd, pres, aus){
+  const basOk = BASICOS.every(([k]) => s[k] === 'ok') && s.b_rel === 'ok';
+  const extras = CONDIC.filter(([k]) => s[k] === 'ok').map(([k,l]) => esc(dLc(l)));
+  const docs = basOk ? `foram apresentados os documentos básicos exigidos (Decreto, art. 20, I)${extras.length ? ', além de: ' + extras.join('; ') : ''}` : `foram apresentados os seguintes documentos: ${pres.length ? esc(pres.join('; ')) : dMark('')}`;
+  const nao = REQ.filter(r => eff(r.id) === 'nao');
+  let req;
+  if (dec === 'def') req = REQ.every(r => eff(r.id) === 'ok') ? 'o imóvel atende aos requisitos do art. 4º do Decreto nº 1.410/2026, que são cumulativos (§ 1º):' : 'a situação dos requisitos do art. 4º do Decreto nº 1.410/2026, que são cumulativos (§ 1º), é a seguinte:';
+  else req = nao.length ? `o imóvel não atende ao${nao.length > 1 ? 's requisitos dos incisos' : ' requisito do inciso'} ${dJuntar(nao.map(r => r.n))} do art. 4º do Decreto nº 1.410/2026; como os requisitos são cumulativos, a falta de qualquer um impede a isenção (§ 1º). A situação dos requisitos é a seguinte:` : 'a situação dos requisitos do art. 4º do Decreto nº 1.410/2026 é a seguinte:';
+  const ids = REQ.map(r => r.id).filter(id => dec === 'def' || eff(id) !== 'na'); /* no indeferimento, requisitos não analisados ficam fora do quadro */
+  let h = (basOk && !aus.length) ? dP(COMPET + docs + ' e que ' + req) : dP(COMPET + docs + '.' + (aus.length ? ` Constam como ausentes ou insuficientes: ${esc(aus.join('; '))}.` : '') + ' ' + cap(req));
+  if (ids.length) h += quadroReq(ids, rd);
+  if (quadroRendaVisivel()) h += tabelaRenda(rd);
+  if (ids.length < REQ.length) h += dP('Fica prejudicada a análise dos demais requisitos, pois a falta de qualquer um deles impede a isenção.');
+  if (dec === 'def') h += art34();
   return h;
 }
 /* "Em resumo": o resultado em palavras simples, para quem recebe o despacho */
 const MOTIVO_SIMPLES = {r1:'o imóvel não é usado somente como moradia', r2:'o imóvel não é moradia de uma só família', r3:'o imóvel não está construído e em condições de uso', r4:'não ficou comprovado que o proprietário é aposentado ou pensionista, nem que mora no imóvel pessoa com necessidades especiais permanentes', r5:'o requerente possui outro imóvel'};
 function resumoDef(exi){
-  return dP(`<b>Em resumo:</b> o pedido foi aceito e o imóvel fica isento do IPTU a partir de ${exi ? exi : dMark('')}, por 4 (quatro) anos; depois disso, será preciso pedir a renovação. Qualquer mudança que possa afetar a isenção (aumento da renda, compra de outro imóvel, mudança de endereço, venda ou desocupação do imóvel, entre outras) deve ser informada à Prefeitura em até 30 (trinta) dias (Decreto, art. 33, § 1º).`);
+  return dR(`<b>Em resumo:</b> o pedido foi aceito e o imóvel fica isento do IPTU a partir de ${exi ? exi : dMark('')}, por 4 (quatro) anos; depois disso, será preciso pedir a renovação. Qualquer mudança que possa afetar a isenção (aumento da renda, compra de outro imóvel, mudança de endereço, venda ou desocupação do imóvel, entre outras) deve ser informada à Prefeitura em até 30 (trinta) dias (Decreto, art. 33, § 1º).`);
 }
 function resumoIndef(nao, rd){
   const m = nao.map(r => r.id === 'r6' ? (rd.lim && rd.hasData && rd.total > rd.lim ? `a renda da família (${brl(rd.total)}) é maior que o limite de ${brl(rd.lim)}, que corresponde a 1,5 salário-mínimo` : 'a renda da família passa de 1,5 salário-mínimo') : MOTIVO_SIMPLES[r.id]);
-  return dP(`<b>Em resumo:</b> o pedido não pôde ser aceito porque ${m.length ? dJuntar(m) : dMark('')}. Para ter direito à isenção, é preciso cumprir todos os requisitos ao mesmo tempo.`);
+  return dR(`<b>Em resumo:</b> o pedido não pôde ser aceito porque ${m.length ? dJuntar(m) : dMark('')}. Para ter direito à isenção, é preciso cumprir todos os requisitos ao mesmo tempo.`);
 }
-const resumoTri = () => dP('<b>Em resumo:</b> a isenção é para o proprietário aposentado ou pensionista, ou para o imóvel em que mora pessoa com necessidades especiais permanentes. Como nenhuma dessas situações foi verificada, o pedido não pôde ser aceito.');
-const resumoArq = () => dP('<b>Em resumo:</b> como os documentos pedidos não foram entregues no prazo, o pedido foi arquivado (encerrado). O requerente pode fazer um novo pedido quando tiver os documentos.');
+const resumoTri = () => dR('<b>Em resumo:</b> a isenção é para o proprietário aposentado ou pensionista, ou para o imóvel em que mora pessoa com necessidades especiais permanentes. Como nenhuma dessas situações foi verificada, o pedido não pôde ser aceito.');
+const resumoArq = () => dR('<b>Em resumo:</b> como os documentos e as informações pedidos não foram entregues no prazo, o pedido foi arquivado (encerrado). O requerente pode fazer um novo pedido quando tiver os documentos.');
+/* anexo da pendência: como comprovar a renda (só as situações que se aplicam) */
+function orientRendaHtml(){
+  return dPs('A renda considerada é a soma da renda bruta (antes dos descontos) de todas as pessoas da família que moram no imóvel (Decreto, art. 13). Apresente o documento de cada pessoa, conforme a situação:') +
+    `<table><tr><th data-w="3400">Situação</th><th data-w="5671">Documento</th></tr>${orientRenda().map(([a,b]) => `<tr><td>${a}</td><td>${b}</td></tr>`).join('')}</table>` + dPs(ORIENT_SOMA) + dPs(ORIENT_FORA);
+}
+const anexoRenda = () => `<p class="h anx">ANEXO – COMO COMPROVAR A RENDA DA FAMÍLIA</p>` + orientRendaHtml();
 function montarTriagem(){
-  const b = BLOCOS_VAZIOS();
-  b.ementa = ementaBloco('tri', 'Indeferimento');
+  const b = BLOCOS_VAZIOS(), o = semPonto(s.obs_tri);
+  b.ementa = ementaBloco('tri');
+  b.objeto = sintese();
   b.contexto = contextoBloco();
-  b.objeto = DH('DO OBJETO', sintese());
-  if (completo()){
-    b.fatos = DH('DOS FATOS', dP(`Dessa forma, no que diz respeito à competência deste Departamento de Fiscalização de Rendas, constatou-se que o proprietário não é aposentado nem pensionista e que o imóvel não é moradia de pessoa com necessidades especiais permanentes${s.obs_tri ? '. ' + esc(s.obs_tri) : ''}.`));
-    b.fundamentacao = DH('DA FUNDAMENTAÇÃO JURÍDICA', dP(FUND_BASE) + dP('O art. 4º, IV, do Decreto exige que o proprietário seja aposentado ou pensionista, ou que o imóvel tenha como morador pessoa com necessidades especiais permanentes. Ausente essa condição, é desnecessário o exame dos demais requisitos.'));
-  } else {
-    b.fatos = dP(`Dessa forma, no que diz respeito à competência deste Departamento de Fiscalização de Rendas, constatou-se que o proprietário não é aposentado nem pensionista e que o imóvel não é moradia de pessoa com necessidades especiais permanentes (Decreto, art. 4º, IV)${s.obs_tri ? '. ' + esc(s.obs_tri) : ''}. Sendo cumulativos os requisitos, a falta de qualquer um impede a isenção (art. 4º, § 1º), o que dispensa o exame dos demais.`);
-  }
-  b.conclusao = dP('Ante o exposto, <b>indefere-se</b> o pedido de reconhecimento da isenção do IPTU prevista no artigo 113 da Lei Complementar nº 203/2022, por não atendido o requisito do inciso IV do art. 4º do Decreto Municipal nº 1.410/2026 (proprietário aposentado ou pensionista, ou morador com necessidades especiais permanentes).');
-  if (completo()) b.conclusao += resumoTri();
-  b.conclusao = DH('DA CONCLUSÃO', b.conclusao);
+  b.fatos = dP(COMPET + `o proprietário não é aposentado nem pensionista e que o imóvel não é moradia de pessoa com necessidades especiais permanentes${o ? '. ' + cap(esc(o)) : ''}. O art. 4º, IV, do Decreto nº 1.410/2026 exige uma dessas condições e, como os requisitos são cumulativos, a falta de qualquer um impede a isenção (§ 1º), o que dispensa o exame dos demais.`);
+  b.conclusao = dP('Ante o exposto, <b>INDEFERE-SE</b> o pedido de reconhecimento da isenção do IPTU prevista no art. 113 da LC nº 203/2022, por não atendido o requisito do inciso IV do art. 4º do Decreto nº 1.410/2026 (proprietário aposentado ou pensionista, ou morador com necessidades especiais permanentes).');
   b.encaminhamento = dP(RESSALVA);
-  return {h:JUNTAR_BLOCOS(b), blocos:{...b, assinatura:assinatura()}, dec:'indef', key:'tri', ctx:{pres:[], aus:[], itens:[], pends:[], docs:[], motivos:[MOTIVO_TRI + (s.obs_tri ? ': ' + esc(s.obs_tri) : '')]}};
+  b.resumo = resumoTri();
+  return {h:juntarBlocos(b, 'indef'), anexo:'', blocos:{...b, assinatura:assinatura()}, dec:'indef', key:'tri', ctx:{pres:[], aus:[], itens:[], pends:[], docs:[], motivos:[MOTIVO_TRI + (s.obs_tri ? ': ' + esc(s.obs_tri) : '')]}};
 }
 function montarParecer(){
   if (triagemIndef()) return montarTriagem();
-  const c = coletar(), dec = s.decisao || autoDecisao(c), rd = renda(), exi = exiFinal(), ex = num(s.exercicio);
+  const c = coletar(), dec = s.decisao || autoDecisao(c), rd = renda(), exi = exiFinal();
   const cond = {prop:'proprietário', poss:'possuidor/posseiro', cess:'cessionário/promitente comprador', outra:'ocupante em outra condição'}[s.condicao];
   const pres = [...BASICOS.filter(([k]) => s[k]==='ok').map(([k,l]) => dLc(l.replace(/,? ou documento equivalente/,''))), ...(s.b_rel==='ok' ? ['documento de relação jurídica com o imóvel' + (s.b_rel_t ? ' (' + dLc(s.b_rel_t) + ')' : '')] : []), ...CONDIC.filter(([k]) => s[k]==='ok').map(([k,l]) => dLc(l))];
   const aus = [...BASICOS.filter(([k]) => s[k]==='falta').map(([k,l]) => dLc(l)), ...(s.b_rel==='falta' ? ['documento de relação jurídica com o imóvel'] : []), ...CONDIC.filter(([k]) => s[k]==='falta').map(([k,l]) => dLc(l))];
   const itens = REQ.map(r => { const e = eff(r.id); const o = s['obs_'+r.id]; return `Inciso ${r.n} do art. 4º do Decreto (${esc(dLc(r.t))}): <b>${LBL[e].toLowerCase()}</b>${o ? '; ' + esc(o) : ''}`; });
-  const pendTxt = c.pend.map(x => esc(x).replace(/\((arts?\.)/g, '(Decreto, $1').replace(/§(\d)/g, '§ $1'));
-  const docsTxt = docsExigir().map(esc);
+  const pendC = c.pendC.map(itemCore); /* o que o contribuinte deve apresentar ou informar */
+  const pendI = c.pendI.map(x => esc(x).replace(/^\[(\w+)\] /, 'Requisito $1 – ').replace(/\((arts?\.)/g, '(Decreto, $1').replace(/§(\d)/g, '§ $1')); /* o que depende de verificação */
   const nao = REQ.filter(r => eff(r.id) === 'nao'), motivos = nao.map(r => motivoReq(r, rd));
-  const auxPne = !!(s.c_pne && s.pn_aux), comp = completo();
+  const auxPne = !!(s.c_pne && s.pn_aux);
   const b = BLOCOS_VAZIOS();
-  const assunto = {def:'Deferimento', indef:'Indeferimento', pend: encOrgao() ? 'Encaminhamento para verificação' : 'Notificação para regularização de pendências', arq:'Arquivamento'}[dec] || 'Análise em andamento';
-  b.ementa = ementaBloco(dec, assunto);
-  b.contexto = contextoBloco();
+  b.ementa = ementaBloco(dec);
   b.objeto = sintese();
+  b.contexto = contextoBloco();
 
-  if (dec === 'def'){
-    if (comp){
-      b.fatos = fatosCompletos(rd, pres, aus, auxPne, ex);
-      b.fundamentacao = fundCompleta(dec, auxPne, cond);
+  if (dec === 'def' || dec === 'indef'){
+    b.fatos = analiseReq(dec, rd, pres, aus);
+    b.fundamentacao = fundExtra(cond, auxPne);
+    if (dec === 'def'){
+      b.conclusao = dP(`Ante o exposto, <b>DEFERE-SE</b> a isenção do IPTU do imóvel (LC nº 203/2022, art. 113), a partir do exercício de <b>${exi ? exi : dMark('')}</b>, em caráter precário, pelo prazo de 4 (quatro) anos (LC nº 203/2022, art. 113, § 3º; Decreto, art. 32, caput e § 1º).`);
+      b.encaminhamento = dP('Emita-se o Certificado de Imunidade e de Isenção Tributária, com registro no Cadastro de Contribuintes Imobiliário (Decreto, art. 2º, § 2º, e art. 31).');
+      b.resumo = resumoDef(exi);
     } else {
-      const it = (id, ok) => { const e = eff(id); return `${REQ.find(r => r.id === id).n} – ${e === 'ok' ? ok : dMark('(' + LBL[e].toLowerCase() + ')')}`; };
-      const hip = dJuntar([s.c_apos && 'proprietário aposentado', s.c_pens && 'proprietário pensionista', s.c_pne && 'morador com necessidades especiais permanentes'].filter(Boolean));
-      const rendaOk = rd.lim ? `renda familiar de ${brl(rd.total)}, não superior ao limite de ${brl(rd.lim)} (1,5 salário-mínimo, de ${brl(rd.sm)})` : dMark('informar o salário-mínimo');
-      let t = 'Comprovados os requisitos do art. 4º do Decreto nº 1.410/2026: ' + [it('r1', s.r1_ativ === 'mei' ? 'uso residencial, com atividade de microempreendedor individual do proprietário (art. 14)' : 'uso unicamente residencial'), it('r2', 'uso unifamiliar'), it('r3', 'imóvel edificado'), it('r4', hip), it('r5', 'inexistência de outra propriedade, domínio útil ou posse tributável pelo IPTU'), it('r6', rendaOk)].join('; ') + '.';
-      if (ex === ANO_TRANSICAO){
-        t += ' ' + ({sim:`Requisitos já preenchidos em 1º de janeiro de ${ANO_TRANSICAO} (Decreto, art. 34, § 1º).`, nao:`Requisitos surgidos somente após 1º de janeiro de ${ANO_TRANSICAO}, com efeitos apenas a partir do exercício seguinte (Decreto, art. 34, § 4º).`}[s.t_ini] || dMark(`informar se os requisitos já estavam preenchidos em 1º de janeiro de ${ANO_TRANSICAO}.`));
-        if (s.t_doc === 'nao') t += ' Os documentos emitidos após essa data não permitem concluir que a situação já existia (art. 34, § 3º).';
-        if (s.t_pago === 'sim') t += ` O pagamento do IPTU/${ANO_TRANSICAO} não impede a isenção; o contribuinte poderá requerer restituição ou compensação (art. 34, §§ 5º e 6º).`;
-      }
-      if (s.condicao && s.condicao !== 'prop') t += ` Registra-se que o requerente figura como ${cond}, e não como proprietário do imóvel (LC nº 203/2022, art. 113, caput).`;
-      b.fatos = dP(t) + (s.rend.length > 1 ? tabelaRenda(rd) : '');
-    }
-    b.conclusao = dP(`Ante o exposto, <b>defere-se</b> a isenção do IPTU do imóvel (LC nº 203/2022, art. 113), com eficácia a partir do exercício de <b>${exi ? exi : dMark('')}</b>, em caráter precário, pelo prazo de 4 (quatro) anos (LC nº 203/2022, art. 113, § 3º; Decreto, art. 32, caput e § 1º).`) + (comp ? resumoDef(exi) : '');
-    b.encaminhamento = dP('Emita-se o Certificado de Imunidade e de Isenção Tributária, com registro no Cadastro de Contribuintes Imobiliário (Decreto, art. 2º, § 2º, e art. 31).' + (comp ? '' : ' O beneficiário deve comunicar à Administração, em até 30 (trinta) dias, qualquer alteração que afete a isenção (Decreto, art. 33, § 1º).'));
-  } else if (dec === 'indef'){
-    if (comp){
-      b.fatos = fatosCompletos(rd, pres, aus, auxPne, ex);
-      b.fundamentacao = fundCompleta(dec, auxPne, cond);
       const pl = nao.length > 1;
-      b.conclusao = dP(`Ante o exposto, <b>indefere-se</b> o pedido de reconhecimento da isenção do IPTU prevista no artigo 113 da Lei Complementar nº 203/2022, ` + (nao.length ? `por não atendid${pl ? 'os os requisitos dos incisos' : 'o o requisito do inciso'} ${dJuntar(nao.map(r => r.n))} do art. 4º do Decreto nº 1.410/2026, sendo cumulativos os requisitos (§ 1º).` : dMark('indicar o motivo do indeferimento (nenhum requisito foi marcado como não atendido).'))) + resumoIndef(nao, rd);
-    } else {
-      b.fatos = dP('Não atendidos os seguintes requisitos do art. 4º do Decreto nº 1.410/2026:') + dBs(motivos, dMark('indicar o motivo do indeferimento (nenhum requisito foi marcado como não atendido).')) + (nao.some(r => r.id === 'r6') && s.rend.length > 1 ? tabelaRenda(rd) : '');
-      b.conclusao = dP('Ante o exposto, <b>indefere-se</b> o pedido de reconhecimento da isenção do IPTU, pois os requisitos são cumulativos e a falta de qualquer um impede o reconhecimento (Decreto, art. 4º, § 1º).');
+      b.conclusao = dP('Ante o exposto, <b>INDEFERE-SE</b> o pedido de reconhecimento da isenção do IPTU prevista no art. 113 da LC nº 203/2022, ' + (nao.length ? `por não atendid${pl ? 'os os requisitos dos incisos' : 'o o requisito do inciso'} ${dJuntar(nao.map(r => r.n))} do art. 4º do Decreto nº 1.410/2026.` : dMark('indicar o motivo do indeferimento (nenhum requisito foi marcado como não atendido).')));
+      b.encaminhamento = dP(RESSALVA);
+      b.resumo = resumoIndef(nao, rd);
     }
-    b.encaminhamento = dP(RESSALVA);
   } else if (dec === 'arq'){
     const ant = despAnterior('pend');
-    b.fatos = dP(`Dessa forma, no que diz respeito à competência deste Departamento de Fiscalização de Rendas, constatou-se que o(a) requerente, notificado(a) ${ant ? 'por meio do Despacho Decisório nº ' + ant : 'por carta'} para complementar a instrução processual no prazo de 10 (dez) dias úteis (art. 29, § 2º do Decreto nº 1.410/2026), não apresentou a documentação indispensável, permanecendo ausentes:`) + dL(docsTxt, dMark('indicar a documentação não apresentada.'));
-    b.conclusao = dP('Ante o exposto, determina-se o <b>arquivamento</b> do pedido, sem prejuízo de novo protocolo – em conformidade com o art. 29, §§ 2º e 3º do Decreto nº 1.410/2026.') + (comp ? resumoArq() : '');
+    b.fatos = dP(COMPET + `o(a) requerente, notificado(a) ${ant ? 'por meio do Despacho Decisório nº ' + ant : 'por carta'} para complementar a instrução do processo no prazo de 10 (dez) dias úteis (Decreto, art. 29, § 2º), não apresentou os documentos e as informações indispensáveis, permanecendo pendentes:`) + dI(pendC, dMark('indicar o que não foi apresentado'));
+    b.conclusao = dP('Ante o exposto, determina-se o <b>ARQUIVAMENTO</b> do pedido, sem prejuízo de novo protocolo (Decreto, art. 29, §§ 2º e 3º).');
+    b.resumo = resumoArq();
   } else if (dec === 'pend' && !encOrgao()){
-    const hipTxt = dJuntar([s.c_apos && 'aposentado', s.c_pens && 'pensionista', s.c_pne && 'morador com necessidades especiais permanentes'].filter(Boolean));
-    const okReq = REQ.filter(r => eff(r.id) === 'ok').map(r => ({r1:'à destinação residencial', r2:'ao uso unifamiliar', r3:'à existência de edificação', r4:'à condição de ' + (hipTxt || 'aposentado, pensionista ou morador com necessidades especiais permanentes'), r5:'à inexistência de outra propriedade', r6:'à renda familiar'}[r.id]));
-    b.fatos = dP(`Dessa forma, no que diz respeito à competência deste Departamento de Fiscalização de Rendas, constatou-se que a documentação acostada aos autos ${okReq.length ? 'permite concluir, em princípio, apenas pelo atendimento dos requisitos relativos ' + dJuntar(okReq) + '. Todavia, não se mostra suficiente para demonstrar o preenchimento integral dos requisitos previstos pela normativa municipal' : 'não se mostra suficiente para demonstrar o preenchimento dos requisitos previstos pela normativa municipal'}, especialmente quanto:`) + dL(docsTxt, dMark('indicar as pendências a regularizar.')) + (rendaPedida() ? ORIENT_HD + dBs(orientRenda()) : '');
-    b.conclusao = dP('Dessa forma, se mostra necessária a complementação da instrução processual pelo(a) requerente, a qual deve se dar em até 10 (dez) dias úteis, contados da ciência a este despacho decisório, sob pena de arquivamento do pedido – em conformidade com o art. 29, §§ 2º e 3º do Decreto nº 1.410/2026.');
+    const hip = dJuntar([s.c_apos && 'aposentado', s.c_pens && 'pensionista', s.c_pne && 'morador com necessidades especiais permanentes'].filter(Boolean));
+    const OK_T = {r1:'a destinação residencial', r2:'o uso unifamiliar', r3:'a existência de edificação', r4:'a condição de ' + (hip || 'aposentado, pensionista ou morador com necessidades especiais permanentes'), r5:'a inexistência de outra propriedade', r6:'a renda familiar dentro do limite'};
+    const ok = REQ.filter(r => eff(r.id) === 'ok').map(r => OK_T[r.id]), rp = rendaPedida();
+    b.fatos = dP(COMPET + (ok.length === REQ.length ? 'a documentação juntada aos autos comprova, em princípio, os requisitos do art. 4º do Decreto nº 1.410/2026, mas a instrução do processo ainda está incompleta.' : ok.length ? `a documentação juntada aos autos comprova, em princípio, ${dJuntar(ok)}, mas não é suficiente para demonstrar os demais requisitos do art. 4º do Decreto nº 1.410/2026.` : 'a documentação juntada aos autos não é suficiente para demonstrar o preenchimento dos requisitos do art. 4º do Decreto nº 1.410/2026.'));
+    if (auxPne) b.fundamentacao = dP(fatoAuxTxt()) + dP(TESE_PNE);
+    b.conclusao = dP('Fica o(a) requerente notificado(a) a apresentar, <b>em até 10 (dez) dias úteis</b> contados da ciência deste despacho, sob pena de arquivamento do pedido (Decreto, art. 29, §§ 2º e 3º), os documentos e as informações a seguir:') + dI(pendC, dMark('indicar o que deve ser apresentado')) + (rp ? dP('As orientações sobre os comprovantes de renda estão no anexo deste despacho.') : '');
+    b.anexo = rp ? anexoRenda() : '';
   } else if (dec === 'pend'){
-    b.fatos = dP('Dessa forma, no que diz respeito à competência deste Departamento de Fiscalização de Rendas, constatou-se que a análise do pedido depende das seguintes verificações:') + dL(pendTxt, dMark('indicar o que deve ser verificado.'));
-    b.conclusao = dP(`Dessa forma, encaminhem-se os autos, por ofício, para <b>${ph((s.destino || '').trim())}</b> (art. 28 do Decreto nº 1.410/2026), a fim de que se manifeste sobre os pontos acima${s.destino_obj ? ', em especial: ' + esc(s.destino_obj) : ''}, com retorno a este Departamento para decisão.`);
+    b.fatos = dP(COMPET + 'a análise do pedido depende das seguintes verificações:') + dI([...pendC, ...pendI], dMark('indicar o que deve ser verificado'));
+    if (auxPne) b.fundamentacao = dP(fatoAuxTxt()) + dP(TESE_PNE);
+    b.conclusao = dP(`Encaminhem-se os autos, por ofício, para <b>${ph((s.destino || '').trim())}</b> (Decreto, art. 28), a fim de que se manifeste sobre os pontos acima${(s.destino_obj || '').trim() ? ', em especial: ' + esc(semPonto(s.destino_obj)) : ''}, com retorno a este Departamento para decisão.`);
   } else {
     b.conclusao = dP(dMark('selecione a conclusão do despacho (a análise ainda está incompleta).'));
   }
-
-  /* benefício por incapacidade temporária: o fato entra com os fatos e a tese com a fundamentação (no modo completo de deferimento/indeferimento já estão inclusos) */
-  if (auxPne && (dec === 'pend' || (!comp && (dec === 'def' || dec === 'indef')))){
-    b.fatos += dP(fatoAuxTxt());
-    b.fundamentacao = dP(TESE_PNE);
-  }
-  /* títulos das seções (só no modo completo) */
-  const tConc = dec === 'pend' ? (encOrgao() ? 'DO ENCAMINHAMENTO' : 'DA NOTIFICAÇÃO') : 'DA CONCLUSÃO';
-  b.objeto = DH('DO OBJETO', b.objeto); b.fatos = DH('DOS FATOS', b.fatos); b.fundamentacao = DH('DA FUNDAMENTAÇÃO JURÍDICA', b.fundamentacao);
-  b.conclusao = DH(tConc, b.conclusao);
-  return {h:JUNTAR_BLOCOS(b), blocos:{...b, assinatura:assinatura()}, dec, key:dec, ctx:{pres:pres.map(esc), aus:aus.map(esc), itens, pends:pendTxt, motivos, docs:docsTxt}};
+  return {h:juntarBlocos(b, dec), anexo:b.anexo, blocos:{...b, assinatura:assinatura()}, dec, key:dec, ctx:{pres:pres.map(esc), aus:aus.map(esc), itens, pends:[...pendC, ...pendI], motivos, docs:pendC}};
 }
 function gerarParecer(){
   if (parecerEditado && !confirm('O despacho foi editado à mão. Gerar de novo substitui essas edições. Continuar?')) return;
   parecerEditado = false;
   const r = montarParecer(), pronto = despPronto();
   const m = modeloAtivo(r.key);
-  $('parecer').innerHTML = m ? aplicarModelo(m, r) : numerar(r.h) + assinatura();
+  $('parecer').innerHTML = m ? aplicarModelo(m, r) : numerar(r.h) + assinatura() + r.anexo;
   $('parecer').scrollIntoView({behavior:'smooth', block:'start'});
   parecerGerado = true;
   if (!pronto){ regMsg('Despacho gerado como rascunho, sem número e sem registro. Informe o nº do processo e o requerente (item 2) e gere de novo.', true); despUI(); return; }
@@ -1131,7 +1134,7 @@ const MOD_CAMPOS = [
   ['fiscal','Fiscal'],['matricula','Matrícula'],['data','Data de hoje']
 ];
 const MOD_LISTAS = [['motivos','Motivos do indeferimento'],['pendencias','Pendências'],['requisitos','Situação de cada requisito'],['documentos_apresentados','Documentos apresentados'],['documentos_ausentes','Documentos ausentes'],['documentos_exigidos','Documentos a apresentar em 10 dias úteis (pendência)'],['orientacoes_renda','Orientações sobre comprovantes de renda (quando pedidos)']];
-const MOD_BLOCOS = [['ementa','Cabeçalho (nº do despacho, processo, interessado, CPF, assunto)'],['objeto','Abertura (“Uma vez recebido o processo…”)'],['contexto','Contexto normativo (parecer da PGM e Decreto)'],['fatos','Fatos e motivos (inclui o quadro de renda)'],['fundamentacao','Fundamentação (quando houver)'],['conclusao','Decisão'],['encaminhamento','Providências (certificado, ressalva de recurso)'],['assinatura','Local, data, fiscal e matrícula']];
+const MOD_BLOCOS = [['ementa','Cabeçalho (nº do despacho, processo, interessado, CPF, assunto)'],['objeto','Do pedido (“Uma vez recebido o processo…”)'],['contexto','Contexto normativo (parecer da PGM e Decreto)'],['fatos','Análise (quadro dos requisitos e de renda, ou itens pendentes)'],['fundamentacao','Parágrafos jurídicos do caso (MEI, auxílio-doença, não proprietário)'],['conclusao','Decisão, notificação ou encaminhamento (com os itens a apresentar)'],['encaminhamento','Providências (certificado, ressalva de recurso)'],['resumo','“Em resumo” (quadro em linguagem simples)'],['assinatura','Local, data, assinatura, cargo e matrícula'],['anexo','Anexo: como comprovar a renda (pendência)']];
 function camposModelo(r){
   const rd = renda(), ex = exiFinal();
   const cond = {prop:'proprietário', poss:'possuidor/posseiro', cess:'cessionário/promitente comprador', outra:'ocupante em outra condição'}[s.condicao];
@@ -1147,7 +1150,7 @@ function camposModelo(r){
 /* transforma o texto do modelo em despacho: # título, - item, | centralizado, **negrito**, {{campo}}, {{n}} numeração */
 function aplicarModelo(txt, r){
   const f = camposModelo(r), bl = r.blocos;
-  const listas = {orientacoes_renda:rendaPedida() ? orientRenda() : [], documentos_exigidos:r.ctx.docs || [], motivos:r.ctx.motivos, pendencias:r.ctx.pends, requisitos:r.ctx.itens, documentos_apresentados:r.ctx.pres, documentos_ausentes:r.ctx.aus};
+  const listas = {orientacoes_renda:rendaPedida() ? orientRenda().map(([a,b]) => `${a}: ${b}`) : [], documentos_exigidos:r.ctx.docs || [], motivos:r.ctx.motivos, pendencias:r.ctx.pends, requisitos:r.ctx.itens, documentos_apresentados:r.ctx.pres, documentos_ausentes:r.ctx.aus};
   const fim = (i, n) => i === n - 1 ? '.' : ';';
   const inl = t => esc(t).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>').replace(/\{\{\s*([\w:]+)\s*\}\}/g, (m, k) => {
     k = k.toLowerCase();
@@ -1162,16 +1165,15 @@ function aplicarModelo(txt, r){
     const l = linha.trim(); if (!l) return;
     const so = /^\{\{\s*([\w:]+)\s*\}\}$/.exec(l); const k = so && so[1].toLowerCase();
     if (k && k.startsWith('bloco:') && k.slice(6) in bl){ h += bl[k.slice(6)]; return; }
-    if (k === 'orientacoes_renda'){ const a = listas[k]; if (a.length) h += ORIENT_HD + a.map((x,i) => `<p class="b"><span class="bl">⦁</span> ${x}${fim(i, a.length)}</p>`).join(''); return; }
-    if (k && k in listas){ const a = listas[k]; h += a.length ? a.map((x,i) => `<p class="b"><span class="bl">⦁</span> ${x}${fim(i, a.length)}</p>`).join('') : `<p class="b"><span class="bl">⦁</span> nenhum.</p>`; return; }
+    if (k === 'orientacoes_renda'){ if (rendaPedida()) h += `<p class="h">ORIENTAÇÕES SOBRE OS COMPROVANTES DE RENDA</p>` + orientRendaHtml(); return; }
+    if (k && k in listas){ const a = listas[k]; h += a.length ? a.map((x,i) => dB(x + fim(i, a.length))).join('') : dB('nenhum.'); return; }
     if (/^#\s/.test(l)) h += `<p class="h">${inl(l.replace(/^#\s+/,''))}</p>`;
     else if (/^\|\s?/.test(l)) h += `<p class="c">${inl(l.replace(/^\|\s?/,''))}</p>`;
-    else if (/^[-•⦁]\s/.test(l)) h += `<p class="b"><span class="bl">⦁</span> ${inl(l.replace(/^[-•⦁]\s+/,''))}</p>`;
+    else if (/^[-•⦁]\s/.test(l)) h += dB(inl(l.replace(/^[-•⦁]\s+/,'')));
     else h += `<p class="n">${inl(l)}</p>`;
   });
   let n = 0; return h.replace(new RegExp(NUM, 'g'), () => String(++n));
 }
-/* lê o texto de um .docx (zip) no próprio navegador */
 /* lê uma entrada (texto) de um .zip, no próprio navegador */
 async function lerEntradaZip(buf, nome){
   const u8 = new Uint8Array(buf), dv = new DataView(buf);
@@ -1242,26 +1244,27 @@ function runsXml(node, st, font, sz){
     else if (ch.nodeType === 1){
       const tg = ch.tagName;
       if (tg === 'BR') x += `<w:r>${RPR(st,font,sz)}<w:br/></w:r>`;
-      else if (ch.classList.contains('bl')) return;
+      else if (ch.classList.contains('bl') || ch.classList.contains('lt')) return;
       else { const ns = {...st}; if (tg==='B'||tg==='STRONG') ns.b = 1; if (tg==='I'||tg==='EM') ns.i = 1; if (tg==='MARK') ns.hl = 1; x += runsXml(ch, ns, font, sz); }
     }
   });
   return x;
 }
-const PPR = jc => `<w:pPr><w:spacing w:after="0" w:line="240" w:lineRule="auto"/><w:jc w:val="${jc}"/></w:pPr>`;
-const BLANK_P = `<w:p>${PPR('both')}</w:p>`;
+/* parágrafo do Word: espaçamento real (sem parágrafos vazios), recuo, borda e sombreamento conforme a classe do parágrafo na tela */
+const BORDA = (lados, cor) => `<w:pBdr>${lados.map(l => `<w:${l} w:val="single" w:sz="4" w:space="4" w:color="${cor}"/>`).join('')}</w:pBdr>`;
+const PPR = (jc, o = {}) => `<w:pPr>${o.keep ? '<w:keepNext/>' : ''}${o.pb ? '<w:pageBreakBefore/>' : ''}${o.bdr || ''}${o.shd ? `<w:shd w:val="clear" w:color="auto" w:fill="${o.shd}"/>` : ''}<w:spacing w:before="${o.b || 0}" w:after="${o.a || 0}" w:line="${o.line || 276}" w:lineRule="auto"/>${o.ind ? `<w:ind ${o.ind}/>` : ''}<w:jc w:val="${jc}"/></w:pPr>`;
 function tblXml(t){
   const rows = [...t.rows]; const cols = [...rows[0].cells];
   const widths = []; cols.forEach(c => { const w = +c.dataset.w || 1500; for (let i = 0; i < (c.colSpan||1); i++) widths.push(Math.round(w / (c.colSpan||1))); });
   const total = widths.reduce((a,b) => a+b, 0);
   const B = '<w:tcBorders><w:top w:val="single" w:sz="4" w:space="0" w:color="auto"/><w:left w:val="single" w:sz="4" w:space="0" w:color="auto"/><w:bottom w:val="single" w:sz="4" w:space="0" w:color="auto"/><w:right w:val="single" w:sz="4" w:space="0" w:color="auto"/></w:tcBorders>';
-  let x = `<w:tbl><w:tblPr><w:tblW w:w="${total}" w:type="dxa"/><w:tblLayout w:type="fixed"/><w:tblCellMar><w:left w:w="70" w:type="dxa"/><w:right w:w="70" w:type="dxa"/></w:tblCellMar><w:tblLook w:val="04A0" w:firstRow="1" w:lastRow="0" w:firstColumn="1" w:lastColumn="0" w:noHBand="0" w:noVBand="1"/></w:tblPr><w:tblGrid>${widths.map(w => `<w:gridCol w:w="${w}"/>`).join('')}</w:tblGrid>`;
-  rows.forEach(r => {
-    x += '<w:tr><w:trPr><w:cantSplit/></w:trPr>'; let ci = 0;
+  let x = `<w:tbl><w:tblPr><w:tblW w:w="${total}" w:type="dxa"/><w:tblLayout w:type="fixed"/><w:tblCellMar><w:top w:w="40" w:type="dxa"/><w:left w:w="80" w:type="dxa"/><w:bottom w:w="40" w:type="dxa"/><w:right w:w="80" w:type="dxa"/></w:tblCellMar><w:tblLook w:val="04A0" w:firstRow="1" w:lastRow="0" w:firstColumn="1" w:lastColumn="0" w:noHBand="0" w:noVBand="1"/></w:tblPr><w:tblGrid>${widths.map(w => `<w:gridCol w:w="${w}"/>`).join('')}</w:tblGrid>`;
+  rows.forEach((r, ri) => {
+    x += `<w:tr><w:trPr><w:cantSplit/>${ri === 0 ? '<w:tblHeader/>' : ''}</w:trPr>`; let ci = 0;
     [...r.cells].forEach(c => {
       const span = c.colSpan || 1; const w = widths.slice(ci, ci + span).reduce((a,b) => a+b, 0); ci += span;
-      const a = {center:'center', right:'right'}[c.dataset.a] || 'left';
-      x += `<w:tc><w:tcPr><w:tcW w:w="${w}" w:type="dxa"/>${span>1?`<w:gridSpan w:val="${span}"/>`:''}${B}<w:vAlign w:val="center"/></w:tcPr><w:p>${PPR(a)}${runsXml(c, {b: c.tagName==='TH'}, 'Aptos Narrow', 22)}</w:p></w:tc>`;
+      const a = {center:'center', right:'right'}[c.dataset.a] || 'left', th = c.tagName === 'TH';
+      x += `<w:tc><w:tcPr><w:tcW w:w="${w}" w:type="dxa"/>${span>1?`<w:gridSpan w:val="${span}"/>`:''}${B}${th ? '<w:shd w:val="clear" w:color="auto" w:fill="EEEEEE"/>' : ''}<w:vAlign w:val="top"/></w:tcPr><w:p>${PPR(a, {line:240})}${runsXml(c, {b: th}, 'Arial', 20)}</w:p></w:tc>`;
     });
     x += '</w:tr>';
   });
@@ -1271,19 +1274,21 @@ function bodyXml(){
   const els = [...$('parecer').children].filter(e => e.tagName === 'TABLE' || (e.textContent || '').trim());
   let x = '';
   els.forEach((el, i) => {
-    const cl = el.className, nxt = els[i+1];
-    if (el.tagName === 'TABLE'){ x += tblXml(el) + BLANK_P; return; }
-    if (cl === 'b'){
-      x += `<w:p>${PPR('both')}<w:r><w:rPr><w:rFonts w:ascii="Cambria Math" w:hAnsi="Cambria Math" w:cs="Cambria Math"/><w:sz w:val="24"/><w:szCs w:val="24"/></w:rPr><w:t>⦁</w:t></w:r>${runsXml(el, {}, 'Arial', 24)}</w:p>`;
-    } else if (cl === 'c'){
-      x += `<w:p>${PPR('center')}${runsXml(el, {}, 'Arial', 24)}</w:p>`;
-    } else if (cl === 'l'){
-      x += `<w:p>${PPR('left')}${runsXml(el, {}, 'Arial', 24)}</w:p>`;
-    } else {
-      x += `<w:p>${PPR('both')}${runsXml(el, {b: cl === 'h'}, 'Arial', 24)}</w:p>`;
-    }
-    const seq = (cl === 'b' || cl === 'c' || cl === 'l') && nxt && nxt.className === cl;
-    if (!seq) x += BLANK_P;
+    if (el.tagName === 'TABLE'){ x += tblXml(el) + `<w:p>${PPR('left', {line:240})}</w:p>`; return; } /* o parágrafo separa tabelas seguidas, que o Word juntaria */
+    const cl = el.classList, nxt = els[i+1], segue = (...c) => !!nxt && nxt.tagName === 'P' && c.some(k => nxt.classList.contains(k));
+    const R = st => runsXml(el, st, 'Arial', 24);
+    if (cl.contains('i') || cl.contains('b')){
+      const lt = el.querySelector('.lt, .bl'), marca = lt ? lt.textContent.trim().replace('⦁', '•') : '•';
+      x += `<w:p>${PPR('left', {a: segue('i', 'b') ? 120 : 240, ind:'w:left="454" w:hanging="454"'})}<w:r>${RPR({}, 'Arial', 24)}<w:t>${XE(marca)}</w:t></w:r><w:r>${RPR({}, 'Arial', 24)}<w:tab/></w:r>${R({}).replace(/(<w:t xml:space="preserve">)\s+/, '$1')}</w:p>`;
+    } else if (cl.contains('h')){
+      const anx = cl.contains('anx');
+      x += `<w:p>${PPR(anx ? 'center' : 'left', {b: anx ? 0 : 120, a:120, keep:1, pb:anx})}${R({b:1})}</w:p>`;
+    } else if (cl.contains('t')) x += `<w:p>${PPR('center', {a:240})}${R({})}</w:p>`;
+    else if (cl.contains('l')) x += `<w:p>${PPR('left', {a: segue('l') ? 0 : 240})}${R({})}</w:p>`;
+    else if (cl.contains('c')) x += `<w:p>${PPR('center', {a: segue('c', 'sig') ? 0 : 240})}${R({})}</w:p>`;
+    else if (cl.contains('sig')) x += `<w:p>${PPR('center', {b:720, bdr:BORDA(['top'], '000000'), ind:'w:left="2268" w:right="2268"'})}${R({})}</w:p>`;
+    else if (cl.contains('r')) x += `<w:p>${PPR('both', {a:240, bdr:BORDA(['top', 'left', 'bottom', 'right'], '888888'), shd:'F2F2F2', ind:'w:left="113" w:right="113"'})}${R({})}</w:p>`;
+    else x += `<w:p>${PPR('both', {a:240})}${R({})}</w:p>`;
   });
   return x;
 }
@@ -1509,6 +1514,7 @@ function limparHtml(h){
 }
 function carregarEstado(j, file){
   s = Object.assign(NEW_STATE(), j.tipo === 'processo-iptu' ? j.estado : j);
+  cfgLoad(true); /* processo salvo antes de uma preferência existir: vale a preferência atual */
   if (s.mi_ccmei === 'nao' || s.mi_ccmei === 'pend') s.mi_ccmei = 'falta'; /* antes: "atendido / não atendido / pendente"; agora é só o documento */
   if (s.ce && s.ce !== 'sim' && s.ce !== 'nao'){ const v = num(s.ce); s.ce = v === null ? '' : (v >= 0.15 ? 'sim' : 'nao'); }
   curFile = file || null; curRec = j.tipo === 'processo-iptu' ? (j.registro || null) : null; parecerGerado = !!j.parecerHtml;
@@ -1532,8 +1538,9 @@ function applyState(){
   });
   renderMoradores(); renderRend(); recalc();
 }
-function cfgSave(){ try { localStorage.setItem('iptuCfg', JSON.stringify({sm:s.sm, fiscal:s.fiscal, matricula:s.matricula, fmtnum:s.fmtnum, detalhe:s.detalhe, numerar:s.numerar, titulos:s.titulos})); } catch(e){} }
-function cfgLoad(){ try { const c = JSON.parse(localStorage.getItem('iptuCfg') || '{}'); ['sm','fiscal','matricula','fmtnum','detalhe','numerar','titulos'].forEach(k => { if (c[k] !== undefined) s[k] = c[k]; }); } catch(e){} }
+const CFG_KEYS = ['sm','fiscal','matricula','fmtnum','numerar','sem_titulos']; /* preferências que valem para todos os processos */
+function cfgSave(){ try { const c = {}; CFG_KEYS.forEach(k => { c[k] = s[k]; }); localStorage.setItem('iptuCfg', JSON.stringify(c)); } catch(e){} }
+function cfgLoad(soFaltantes){ try { const c = JSON.parse(localStorage.getItem('iptuCfg') || '{}'); CFG_KEYS.forEach(k => { if (c[k] !== undefined && (!soFaltantes || s[k] === undefined)) s[k] = c[k]; }); } catch(e){} }
 
 document.addEventListener('input', onChange);
 document.addEventListener('change', onChange);
@@ -1547,7 +1554,7 @@ function onChange(e){
     if (t.checked && ['c_nenhuma','c_apos','c_pens','c_pne'].includes(t.dataset.k)){
       ['c_nenhuma','c_apos','c_pens','c_pne'].forEach(k => { if (k !== t.dataset.k && (t.dataset.k === 'c_nenhuma' || k === 'c_nenhuma')){ s[k] = false; const el = document.querySelector(`[data-k="${k}"]`); if (el) el.checked = false; } });
     }
-    if (['sm','fiscal','matricula','fmtnum','detalhe','numerar','titulos'].includes(t.dataset.k)) cfgSave();
+    if (CFG_KEYS.includes(t.dataset.k)) cfgSave();
     recalc();
   } else if (t.dataset.l){
     const arr = s[t.dataset.l], it = arr[+t.dataset.i], f = t.dataset.f;
@@ -1580,11 +1587,11 @@ $('despLiberar').onclick = despLiberar;
 $('despProx').onchange = e => { const v = parseInt(e.target.value, 10); if (v >= 1){ despSeq[despAno()] = v - 1; despSeqSave(); } despUI(); };
 /* modelos próprios: tela de edição */
 const MOD_EX = {
-  arq: '{{bloco:ementa}}\n{{bloco:objeto}}\n{{bloco:contexto}}\n{{bloco:fatos}}\n{{bloco:conclusao}}\n{{bloco:assinatura}}',
+  arq: '{{bloco:ementa}}\n# DO PEDIDO\n{{bloco:objeto}}\n# DO CONTEXTO NORMATIVO\n{{bloco:contexto}}\n# DA ANÁLISE\n{{bloco:fatos}}\n# DA DECISÃO\n{{bloco:conclusao}}\n{{bloco:resumo}}\n{{bloco:assinatura}}',
   tri: '{{bloco:ementa}}\n{{bloco:objeto}}\n{{bloco:contexto}}\n{{n}}. Verificou-se que o proprietário não é aposentado nem pensionista e que o imóvel não é moradia de pessoa com necessidades especiais permanentes. {{obs_triagem}}\n{{n}}. Ante o exposto, **indefere-se** o pedido, por não atendido o requisito do inciso IV do art. 4º do Decreto nº 1.410/2026.\n{{bloco:encaminhamento}}\n{{bloco:assinatura}}',
   def: '{{bloco:ementa}}\n{{bloco:objeto}}\n{{bloco:contexto}}\n{{bloco:fatos}}\n{{bloco:fundamentacao}}\n{{n}}. Ante o exposto, **defere-se** a isenção do IPTU, com eficácia a partir do exercício de **{{exercicio_inicial}}**, pelo prazo de 4 (quatro) anos.\n{{bloco:encaminhamento}}\n{{bloco:assinatura}}',
   indef: '{{bloco:ementa}}\n{{bloco:objeto}}\n{{bloco:contexto}}\n{{n}}. Não foram atendidos os seguintes requisitos:\n{{motivos}}\n{{bloco:fundamentacao}}\n{{n}}. Ante o exposto, **indefere-se** o pedido.\n{{bloco:encaminhamento}}\n{{bloco:assinatura}}',
-  pend: '{{bloco:ementa}}\n{{bloco:objeto}}\n{{bloco:contexto}}\n{{bloco:fundamentacao}}\n{{n}}. Para o prosseguimento da análise, **favor regularizar as seguintes pendências** em até 10 (dez) dias úteis do recebimento desta notificação:\n{{documentos_exigidos}}\n{{orientacoes_renda}}\n{{n}}. Não regularizadas, o pedido será arquivado, sem prejuízo de novo protocolo (Decreto, art. 29, § 3º).\n{{bloco:assinatura}}'
+  pend: '{{bloco:ementa}}\n{{bloco:objeto}}\n{{bloco:contexto}}\n{{bloco:fatos}}\n{{bloco:fundamentacao}}\n{{n}}. Para o prosseguimento da análise, **apresente os documentos e as informações abaixo** em até 10 (dez) dias úteis do recebimento desta notificação:\n{{documentos_exigidos}}\n{{n}}. Não atendida a notificação, o pedido será arquivado, sem prejuízo de novo protocolo (Decreto, art. 29, § 3º).\n{{bloco:assinatura}}\n{{bloco:anexo}}'
 };
 let mdRasc = null, mdAba = 'def';
 function mdStatus(){
@@ -1645,7 +1652,7 @@ $('btnDoc').onclick = baixarDocx;
 $('btnSalvar').onclick = () => salvarProcesso();
 $('btnAbrir').onclick = () => { if (dirH){ $('regTabela').scrollIntoView({behavior:'smooth'}); $('filtroProc').focus(); } else $('fileAbrir').click(); };
 $('fileAbrir').onchange = e => { const f = e.target.files[0]; if (!f) return; if (dirty && !confirm('Há alterações não salvas. Descartá-las e abrir o arquivo?')){ e.target.value = ''; return; } const rd = new FileReader(); rd.onload = () => { try { carregarEstado(JSON.parse(rd.result), null); } catch(err){ alert('Arquivo inválido.'); } }; rd.readAsText(f); e.target.value = ''; };
-$('btnLimpar').onclick = () => { if (dirty && !confirm('Há alterações não salvas. Iniciar nova análise mesmo assim?')) return; if (!dirty && !confirm('Iniciar nova análise?')) return; const keep = {sm:s.sm, fiscal:s.fiscal, matricula:s.matricula, fmtnum:s.fmtnum, detalhe:s.detalhe, numerar:s.numerar, titulos:s.titulos}; s = Object.assign(NEW_STATE(), keep); curFile = null; curRec = null; parecerGerado = false; dirty = false; applyState(); $('parecer').innerHTML = placeholderParecer; saveInd(); renderReg(); window.scrollTo(0,0); };
+$('btnLimpar').onclick = () => { if (dirty && !confirm('Há alterações não salvas. Iniciar nova análise mesmo assim?')) return; if (!dirty && !confirm('Iniciar nova análise?')) return; const keep = {}; CFG_KEYS.forEach(k => { keep[k] = s[k]; }); s = Object.assign(NEW_STATE(), keep); curFile = null; curRec = null; parecerGerado = false; dirty = false; applyState(); $('parecer').innerHTML = placeholderParecer; saveInd(); renderReg(); window.scrollTo(0,0); };
 $('btnPasta').onclick = escolherPasta;
 $('btnAtualizar').onclick = recarregarPasta;
 document.addEventListener('keydown', e => { if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's'){ e.preventDefault(); salvarProcesso(); } });

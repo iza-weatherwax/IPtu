@@ -21,22 +21,44 @@ próprio para cada resultado (deferimento, indeferimento, encaminhamento por
 pendência e indeferimento na triagem) — digitando ou carregando um arquivo
 `.docx` ou `.txt`. O modelo usa campos como `{{requerente}}`, `{{inscricao}}`,
 `{{motivos}}`, `{{pendencias}}` e `{{n}}` (numeração), e pode reaproveitar
-blocos do texto automático, como `{{bloco:fatos}}`. Resultado sem modelo
+blocos do texto automático, como `{{bloco:fatos}}`, `{{bloco:resumo}}` e
+`{{bloco:anexo}}`. Resultado sem modelo
 cadastrado continua saindo no formato automático. Os modelos ficam só no
 navegador; o botão **Baixar modelos** gera uma cópia em `.json`.
 
 ## Texto do despacho
 
-O despacho segue o modelo do departamento (Despacho Decisório): cabeçalho com
-nº do despacho, processo, interessado, CNPJ/CPF e assunto; abertura "Uma vez
-recebido o processo…"; parágrafo de contexto normativo (parecer da PGM e
-Decreto nº 1.410/2026, editável ou desligável no card **Modelo do despacho**);
-e o corpo conforme o resultado. Nas pendências, cada documento faltante é
-pedido de forma específica, por pessoa e por tipo de rendimento (por exemplo,
-"informar o valor mensal bruto da pensão recebida por Fulano"), em itens a),
-b), c). A numeração dos parágrafos e os títulos de seção são opcionais.
-O texto tem dois níveis de detalhe: **Completo** (padrão), com quadro dos
-requisitos em linguagem simples e "Em resumo", e **Enxuto**.
+Há três tipos de despacho: **deferimento**, **indeferimento** e **pendência**
+(pede ao contribuinte os documentos e as informações que faltam). Variações do
+mesmo formato: indeferimento na triagem, arquivamento quando a pendência não é
+atendida e encaminhamento a outro órgão.
+
+Todos seguem o modelo do departamento (Despacho Decisório), na mesma ordem:
+
+1. **Cabeçalho:** nº do despacho, processo, interessado, CPF e assunto com o
+   exercício e o resultado (ex.: `ISENÇÃO DE IPTU – EXERCÍCIO DE 2026 – DEFERIMENTO`).
+2. **Do pedido:** "Uma vez recebido o processo…".
+3. **Do contexto normativo:** parecer da PGM e Decreto nº 1.410/2026, em todos
+   os despachos (texto editável ou desligável em **Configurações do despacho**).
+4. **Da análise:** no deferimento e no indeferimento, um quadro com os seis
+   requisitos (requisito, situação e como foi verificado) e, quando há mais de
+   um rendimento, o quadro da renda da família com o total e o limite. No
+   indeferimento, os requisitos não analisados ficam fora do quadro.
+5. **Da decisão** (ou **Da notificação** / **Do encaminhamento**): a decisão,
+   as providências (certificado ou ressalva de recurso) e o quadro "Em resumo",
+   em linguagem simples.
+6. Data, linha de assinatura, nome do fiscal, "Auditor Fiscal" e matrícula.
+
+Na pendência, cada item sai como "**Assunto:** o que apresentar (artigo do
+Decreto)", em itens a), b), c), pedido de forma específica, por pessoa e por
+tipo de rendimento. O prazo de 10 dias úteis e o aviso de arquivamento aparecem
+uma vez, antes da lista. Quando a renda é pedida, as orientações sobre os
+comprovantes vão num **anexo** depois da assinatura, em página própria.
+
+As citações seguem um padrão só: "(Decreto, art. X)" no fim da frase. A
+numeração dos parágrafos é opcional, e os títulos das seções podem ser
+ocultados. No Word, o espaçamento é feito pelo próprio parágrafo (sem linhas
+em branco), os itens têm recuo e as tabelas usam a mesma fonte do texto.
 
 ## Numeração do despacho
 

@@ -40,7 +40,7 @@ const X = '<img src=x onerror=alert("XSS")>';
   let p = await abrir(); await dados(p); await p.check('[data-k="c_nenhuma"]');
   let t = await gerar(p);
   ok(/DESPACHO DECISÓRIO Nº 1\/\d{4}/.test(t), 'triagem: título numerado');
-  ok(/indefere-se/.test(t) && /art\. 38/.test(t), 'triagem: indefere e ressalva recurso (art. 38)');
+  ok(/INDEFERE-SE/.test(t) && /art\. 38/.test(t), 'triagem: indefere e ressalva recurso (art. 38)');
   ok(/Uma vez recebido o processo nº 4085\/2026/.test(t) && /INTERESSADO: MARIA DA SILVA/.test(t), 'cabeçalho e abertura no modelo do departamento');
   ok(/esta auditoria fiscal teve acesso ao parecer jurídico/.test(t), 'contexto normativo (PGM) presente');
   ok(await p.isDisabled('[data-k="decisao"]'), 'triagem trava a conclusão do despacho');
@@ -49,14 +49,18 @@ const X = '<img src=x onerror=alert("XSS")>';
   p = await abrir(); await dados(p); await tudoOk(p);
   ok(/Deferimento/.test(await p.textContent('#sugestao')), 'tudo atendido sugere deferimento');
   t = await gerar(p);
-  ok(/defere-se/.test(t) && /Emita-se o Certificado/.test(t) && /Em resumo/.test(t), 'deferimento: decisão, certificado e "Em resumo"');
-  ok(!/Morador\tNúcleo/.test(t), 'deferimento: sem quadro de renda com uma só pessoa');
+  ok(/DEFERE-SE/.test(t) && /Emita-se o Certificado/.test(t) && /Em resumo/.test(t), 'deferimento: decisão, certificado e "Em resumo"');
+  ok(!/Morador\tRendimento/.test(t), 'deferimento: sem quadro de renda com uma só pessoa');
+  ok(/Requisito \(Decreto, art\. 4º\)\tSituação\tComo foi verificado/.test(t) && /VI – Renda familiar de até 1,5 salário-mínimo\tAtendido\tRenda familiar de R\$\s?1\.400,00/.test(t), 'deferimento: quadro dos requisitos (requisito, situação, como foi verificado)');
+  const ordem = ['DO PEDIDO', 'DO CONTEXTO NORMATIVO', 'DA ANÁLISE', 'DA DECISÃO', 'DEFERE-SE', 'Emita-se', 'Em resumo', 'Araguari,', 'Auditor Fiscal – Matrícula'].map(x => t.indexOf(x));
+  ok(ordem.every((x, i) => x >= 0 && (i === 0 || x > ordem[i-1])), 'deferimento: seções na ordem e "Em resumo" depois das providências', ordem.join(','));
+  ok(/CPF: 111/.test(t) && !/CNPJ/.test(t) && /ASSUNTO: ISENÇÃO DE IPTU – EXERCÍCIO DE \d{4} – DEFERIMENTO/.test(t), 'cabeçalho: só CPF e assunto com o resultado');
   await p.context().close();
 
   p = await abrir(); await dados(p); await tudoOk(p, 3000);
   ok(/Indeferimento/.test(await p.textContent('#sugestao')), 'renda acima do limite sugere indeferimento');
   t = await gerar(p);
-  ok(/indefere-se/.test(t) && /incisos? VI/.test(t) && /R\$\s?3\.000,00/.test(t) && !/Notifica/.test(t), 'indeferimento por renda: direto, sem notificação');
+  ok(/INDEFERE-SE/.test(t) && /incisos? VI/.test(t) && /R\$\s?3\.000,00/.test(t) && !/NOTIFICA/i.test(t), 'indeferimento por renda: direto, sem notificação');
   ok(!(await p.isVisible('#notifBox')), 'indeferimento: sem opção de "já notificado"');
   await p.context().close();
 
@@ -67,23 +71,24 @@ const X = '<img src=x onerror=alert("XSS")>';
   for (const [i, n] of [[1,'SEBASTIANA'],[2,'ROSA']]){ await p.click('#addMor'); await p.fill(`[data-l="moradores"][data-i="${i}"][data-f="nome"]`, n); }
   for (const i of [0,1,2]){ await p.click('#addRend'); await p.selectOption(`[data-l="rend"][data-i="${i}"][data-f="m"]`, String(i)); }
   await sel(p,'decisao','pend'); t = await gerar(p);
-  ok(/apresentar comprovação da aposentadoria de JOSE, SEBASTIANA e ROSA, com o valor mensal bruto/.test(t), 'renda: uma frase agrupada por tipo de rendimento');
+  ok(/comprovante, com o valor mensal bruto, da aposentadoria de JOSE, SEBASTIANA e ROSA/.test(t), 'renda: uma frase agrupada por tipo de rendimento');
   ok(!/informar o valor mensal bruto da aposentadoria recebida/.test(t), 'renda: sem repetição por pessoa');
-  const orient = linhas(t).filter(x => x.startsWith('⦁'));
-  ok(orient.length === 3 && /aposentado/.test(orient[0]), 'orientações de renda só com os exemplos aplicáveis', String(orient.length));
+  const anexo = t.slice(t.indexOf('ANEXO – COMO COMPROVAR A RENDA DA FAMÍLIA'));
+  ok(t.indexOf('ANEXO') > t.indexOf('Auditor Fiscal') && /Aposentado ou pensionista \(INSS/.test(anexo) && !/carteira assinada/.test(anexo) && /Não entram na soma/.test(anexo), 'orientações de renda no anexo, depois da assinatura, só com as situações aplicáveis');
+  ok(/ASSUNTO: ISENÇÃO DE IPTU – EXERCÍCIO DE \d{4} – SOLICITAÇÃO DE DOCUMENTOS E INFORMAÇÕES/.test(t) && /DA NOTIFICAÇÃO/.test(t), 'pendência: assunto e seção da notificação');
   ok(/em até 10 \(dez\) dias úteis/.test(t) && /art\. 29, §§ 2º e 3º/.test(t), 'pendência: prazo de 10 dias úteis e art. 29');
   await p.selectOption('[data-l="rend"][data-i="0"][data-f="doc"]', {index: 1}); await p.fill('[data-l="rend"][data-i="0"][data-f="valor"]', '800');
   await p.selectOption('[data-l="rend"][data-i="1"][data-f="tipo"]', 'pensao'); await p.fill('[data-l="rend"][data-i="1"][data-f="valor"]', '600');
   await p.selectOption('[data-l="rend"][data-i="1"][data-f="doc"]', {index: 1}); await p.selectOption('[data-l="rend"][data-i="2"][data-f="doc"]', {index: 1});
   t = await gerar(p);
-  ok(/informar o valor mensal bruto da aposentadoria de ROSA/.test(t) && !/JOSE/.test(linhas(t).find(x => /^a\)/.test(x)) || ''), 'só falta o valor: pede só o valor (e só de quem falta)');
+  ok(/informação do valor mensal bruto da aposentadoria de ROSA/.test(t) && !/JOSE/.test(linhas(t).find(x => /^a\)/.test(x)) || ''), 'só falta o valor: pede só o valor (e só de quem falta)');
   await p.context().close();
 
   p = await abrir(); await dados(p); await p.check('[data-k="c_apos"]'); await sel(p,'b_rel','falta'); await p.check('[data-k="copropr"]'); await sel(p,'c_nucleo','falta'); await p.check('[data-k="r5c_0"]');
   await sel(p,'r5_cons','nenhum'); await sel(p,'r5_decl','falta'); await p.selectOption('[data-k="ap_doc"]', {index: 2}); await p.check('[data-k="renda_falta"]'); await sel(p,'decisao','pend');
   t = await gerar(p);
-  ok(/matrícula atualizada do imóvel/.test(t) && /copropriedade/.test(t) && /composição do núcleo familiar/.test(t) && /Serviço Registral Imobiliário/.test(t) && /composição da renda do núcleo familiar \(faz-se necessária a entrega de declaração/.test(t), 'itens do modelo do departamento (matrícula, copropriedade, núcleo, certidão, renda)');
-  ok(linhas(t).some(x => /^a\) À /.test(x)) && linhas(t).some(x => /^b\) À /.test(x)), 'itens lettered a), b), c)');
+  ok(/matrícula atualizada do imóvel/.test(t) && /copropriedade/.test(t) && /composição do núcleo familiar/.test(t) && /Serviço Registral Imobiliário/.test(t) && /Renda da família: declaração assinada pelo\(a\) requerente/.test(t), 'itens do modelo do departamento (matrícula, copropriedade, núcleo, certidão, renda)');
+  ok(linhas(t).some(x => /^a\) Titularidade do imóvel: /.test(x)) && linhas(t).some(x => /^b\) Núcleo familiar: /.test(x)), 'itens a), b), c) com o assunto antes do pedido');
   await p.context().close();
 
   sec('Três estados: não conferido ≠ ausente');
@@ -91,7 +96,7 @@ const X = '<img src=x onerror=alert("XSS")>';
   ok(/incompleta/i.test(await p.textContent('#sugestao')), 'aposentado sem conferir o documento: análise incompleta');
   ok(!(await p.isVisible('#secPendC')), 'aposentado sem conferir: nada a pedir ao contribuinte');
   await p.selectOption('[data-k="ap_doc"]', 'falta');
-  ok(/Pendência/.test(await p.textContent('#sugestao')) && /À condição de aposentado/.test(await p.innerText('#lstPendC')), 'documento ausente: pendência com o pedido específico');
+  ok(/Pendência/.test(await p.textContent('#sugestao')) && /Condição de aposentado: /.test(await p.innerText('#lstPendC')), 'documento ausente: pendência com o pedido específico');
   await p.context().close();
 
   sec('Pedidos que não dependem do status do requisito (MEI, outro imóvel, pendência marcada)');
@@ -101,7 +106,7 @@ const X = '<img src=x onerror=alert("XSS")>';
   ok(/Pendência/.test(await p.textContent('#sugestao')), 'MEI com CCMEI ausente: pendência, não impedimento');
   t = await gerar(p);
   ok(/microempreendedor individual/.test(t) && /CCMEI/.test(t) && /DASN-SIMEI/.test(t) && /atividade é exercida no imóvel/.test(t) && /art\. 21, VI, “a” e “b”/.test(t), 'MEI: pede o CCMEI e os complementares marcados');
-  ok(/composição da renda/.test(t) && !/\(faz-se necessária a apresentação do Certificado[^)]*\([^)]*\)\)/.test(t), 'MEI: também pede a renda, sem parênteses aninhados');
+  ok(/Renda da família: /.test(t) && !/\([^()]*\([^()]*\([^()]*\)/.test(t), 'MEI: também pede a renda, sem parênteses aninhados');
   await sel(p,'decisao','pend'); t = await gerar(p);
   ok(/CCMEI/.test(t), 'MEI: conclusão “Pendência” escolhida à mão continua pedindo o CCMEI');
   await p.context().close();
@@ -117,7 +122,7 @@ const X = '<img src=x onerror=alert("XSS")>';
   await sel(p,'r5_decl','ok'); await sel(p,'r5_cons','esclarecer'); await f(p,'r5_det','inscrição 98765');
   ok(/Pendência/.test(await p.textContent('#sugestao')), 'outro imóvel “a esclarecer”: pendência');
   t = await gerar(p);
-  ok(/outro imóvel que consta em seu nome, a saber: inscrição 98765/.test(t) && /Cartório de Registro de Imóveis/.test(t) && /art\. 12 e art\. 21, V, “c”/.test(t) && /composição da renda/.test(t), 'outro imóvel: pede os documentos que o esclareçam, além da renda');
+  ok(/outro imóvel que consta em seu nome, a saber: inscrição 98765/.test(t) && /Cartório de Registro de Imóveis/.test(t) && /art\. 12 e art\. 21, V, “c”/.test(t) && /Renda da família: /.test(t), 'outro imóvel: pede os documentos que o esclareçam, além da renda');
   await sel(p,'r5_cons','outro');
   ok(/Indeferimento/.test(await p.textContent('#sugestao')), 'outro imóvel que impede: indeferimento');
   await sel(p,'decisao','pend'); t = await gerar(p);
@@ -128,7 +133,7 @@ const X = '<img src=x onerror=alert("XSS")>';
   await sel(p,'r5_cons','nenhum'); await sel(p,'r5_decl','ok'); await p.check('[data-k="r5c_2"]'); await f(p,'obs_r5','certidão de casamento'); await sel(p,'decisao','pend');
   ok(/outros documentos necessários à verificação[^]*certidão de casamento/.test(await p.innerText('#lstPendC')), 'inciso V: “outros documentos” marcados são pedidos mesmo com o requisito atendido');
   await f(p,'obs_r2','enviar fotos do imóvel'); await sel(p,'st_r2','pend');
-  ok(/Ao uso unifamiliar \(enviar fotos do imóvel\)/.test(await p.innerText('#lstPendC')), 'requisito marcado como pendente: a observação do fiscal vira pedido');
+  ok(/Uso unifamiliar: enviar fotos do imóvel/.test(await p.innerText('#lstPendC')), 'requisito marcado como pendente: a observação do fiscal vira pedido');
   await p.context().close();
 
   sec('Arquivamento e indeferimento direto');
@@ -137,7 +142,7 @@ const X = '<img src=x onerror=alert("XSS")>';
   ok(/Nº 461-01\/\d{4}/.test(t), 'formato do número configurável (461-01/ano)');
   await sel(p,'decisao','arq'); t = await gerar(p);
   ok(/Nº 461-02\//.test(t) && /Despacho Decisório nº 461-01\//.test(t), 'arquivamento: novo número e cita o despacho da notificação');
-  ok(/determina-se o arquivamento/.test(t), 'arquivamento decide por arquivar');
+  ok(/determina-se o ARQUIVAMENTO/.test(t) && /ASSUNTO: .* – ARQUIVAMENTO/.test(t), 'arquivamento decide por arquivar');
   await p.context().close();
 
   sec('Numeração');
@@ -207,6 +212,19 @@ const X = '<img src=x onerror=alert("XSS")>';
   ok(/^Despacho_IPTU_/.test(dl.suggestedFilename()), 'nome do arquivo: Despacho_IPTU_…');
   await p.context().close();
 
+  /* pendência com itens, quadro de renda e anexo: formatação do Word */
+  p = await abrir(); await dados(p); await tudoOk(p); await p.click('#addMor'); await p.click('#addRend'); await p.selectOption('[data-l="rend"][data-i="1"][data-f="m"]', '1');
+  await sel(p,'b_rel','falta'); await sel(p,'decisao','pend'); t = await gerar(p);
+  ok(/\na\) Titularidade do imóvel: /.test('\n' + t), 'texto copiado: espaço entre a letra e o item');
+  const [dl2] = await Promise.all([p.waitForEvent('download'), p.click('#btnDoc')]);
+  const doc2 = await p.evaluate(async b => { const bin = atob(b); const u = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i); return await lerEntradaZip(u.buffer, 'word/document.xml'); }, require('fs').readFileSync(await dl2.path()).toString('base64'));
+  ok(await p.evaluate(h => !new DOMParser().parseFromString(h, 'application/xml').querySelector('parsererror'), doc2), 'corpo do Word é XML válido');
+  ok(/w:hanging="454"/.test(doc2) && /<w:tab\/>/.test(doc2), 'Word: itens com recuo e tabulação depois da letra');
+  ok(/<w:pageBreakBefore\/>[^]*ANEXO – COMO COMPROVAR A RENDA/.test(doc2), 'Word: anexo de renda em página nova');
+  ok(/<w:tblHeader\/>/.test(doc2) && !/Aptos/.test(doc2), 'Word: tabelas com cabeçalho repetido e mesma fonte do texto');
+  ok((doc2.match(/<w:p><w:pPr><w:spacing w:before="0" w:after="0" w:line="240" w:lineRule="auto"\/><w:jc w:val="left"\/><\/w:pPr><\/w:p>/g) || []).length === (doc2.match(/<\/w:tbl>/g) || []).length, 'Word: espaçamento sem parágrafos vazios (só o que separa tabelas)');
+  await p.context().close();
+
   sec('Ano e modelos próprios');
   p = await abrir();
   ok(await p.inputValue('[data-k="exercicio"]') === String(new Date().getFullYear()), 'exercício padrão é o ano corrente');
@@ -218,9 +236,10 @@ const X = '<img src=x onerror=alert("XSS")>';
   await p.context().close();
 
   p = await abrir(); await dados(p); await tudoOk(p); await sel(p,'t_pago','sim');
-  await p.evaluate(() => document.querySelector('#cardCfg').open = true); await sel(p,'detalhe','enxuto');
   t = await gerar(p);
-  ok(/IPTU\/\d{4} não impede/.test(t) && !t.includes('${'), 'despacho enxuto: ano do IPTU já pago substituído');
+  ok(/IPTU\/\d{4} não impede/.test(t) && !t.includes('${'), 'ano do IPTU já pago substituído no texto');
+  await p.evaluate(() => document.querySelector('#cardCfg').open = true); await p.check('[data-k="sem_titulos"]'); t = await gerar(p);
+  ok(!/DA ANÁLISE|DA DECISÃO/.test(t) && /DEFERE-SE/.test(t), 'títulos das seções podem ser ocultados');
   await p.context().close();
 
   sec('Acessibilidade e layout');
