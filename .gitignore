@@ -12,3 +12,7 @@ processos/
 .DS_Store
 Thumbs.db
 *.swp
+
+# Testes (Playwright)
+node_modules/
+package-lock.json

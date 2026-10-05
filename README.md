@@ -103,6 +103,28 @@ já ignora os nomes de arquivo que a ferramenta costuma gerar
 Ainda assim, o recomendado é sempre escolher uma pasta fora do repositório
 para guardar os processos.
 
+## Conferência, papel timbrado e testes
+
+- O painel lateral tem quatro blocos: **Situação** (conclusão, geração e
+  salvamento), **Conferência** (impeditivos, o que será pedido ao contribuinte,
+  o que o fiscal ainda precisa verificar e avisos — só aparecem as seções com
+  itens), **Processos** e **Configurações do despacho** (recolhido: numeração,
+  texto e modelos próprios).
+- Comprovantes do aposentado/pensionista/pessoa com necessidades especiais têm
+  três estados: *não conferido* (não gera pendência), *ausente* (gera pedido) ou
+  o documento apresentado. Sem rendimentos lançados, só se pede a declaração de
+  renda quando o fiscal marca "Nenhum comprovante de renda foi apresentado".
+- O despacho só recebe número e é registrado quando o nº do processo e o
+  requerente estão preenchidos; antes disso é um rascunho. O botão **Liberar o
+  nº deste processo** desfaz a numeração.
+- O papel timbrado (Word e impressão) segue o do departamento; no Word o quadro
+  da direita mostra "FL." e a página (o nº do processo vai só no corpo).
+- As regras do art. 34 do Decreto valem só para o exercício
+  `ANO_TRANSICAO` (2026, no código); o exercício padrão é o ano corrente.
+- Testes de ponta a ponta (Playwright): `npm install`, `npx playwright install
+  chromium` e `npm test`. Rodam também no GitHub Actions a cada push; o site
+  publicado no GitHub Pages contém apenas o `index.html`.
+
 ## Base normativa
 
 LC 203/2022 (arts. 10, 86, 95, 96, 113, 443, 446) e Decreto 1.410/2026.
