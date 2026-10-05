@@ -675,19 +675,26 @@ function pendEsp(){
   if (eff('r5') === 'pend' && s.r5_decl !== 'ok') add('À inexistência de outra propriedade em nome do(a) requerente', 'faz-se necessária a apresentação de declaração firmada pelo(a) requerente, sob as penas da lei, de que não possui outro imóvel – Decreto, art. 21, V, “a”' + (s.r5c_0 ? '; a certidão do Serviço Registral Imobiliário da Comarca de Araguari terá a emissão providenciada pela Prefeitura Municipal' : ''));
   if (s.r5c_1 && eff('r5') !== 'nao') add('À inexistência de propriedade em outras comarcas', 'faz-se necessária a apresentação de certidões do registro de imóveis das demais comarcas em que o(a) requerente possa possuir imóvel – Decreto, art. 21, V, “c”');
   if (rendaPedida()){
-    const rd = renda(), p = [];
-    if (!s.rend.length) p.push('faz-se necessária a entrega de declaração firmada pelo(a) requerente, sob as penas da lei, identificando a renda de cada componente do núcleo familiar, com a anexação dos comprovantes de renda, ou de declaração de ausência de renda de quem não a possui');
+    const rd = renda();
+    if (!s.rend.length) add('À composição da renda do núcleo familiar', 'faz-se necessária a entrega de declaração firmada pelo(a) requerente, sob as penas da lei, identificando a renda de cada componente do núcleo familiar, com a anexação dos comprovantes de renda, ou de declaração de ausência de renda de quem não a possui – Decreto, art. 21, IV');
     else {
-      const nome = i => s.moradores[+i]?.nome || 'Morador ' + (+i + 1);
-      rd.semLinha.forEach(n => p.push(`apresentar comprovante de renda de ${n} ou, não havendo renda, declaração de ausência de renda`));
+      /* uma frase só: agrupa as pessoas por tipo de rendimento e pelo que falta (comprovação e/ou valor) */
+      const nome = i => (s.moradores[+i]?.nome || '').trim() || 'Morador ' + (+i + 1);
+      const grupos = {}, ordem = [], soValor = {};
+      const juntar = (o, k, n) => { (o[k] = o[k] || []); if (!o[k].includes(n)) o[k].push(n); };
       s.rend.forEach(x => {
         const m = s.moradores[+x.m], tp = TIPOS[x.tipo]; if (!m || !m.nucleo || !tp) return;
-        const de = TIPO_DE[x.tipo] || 'do rendimento';
-        if (String(x.valor ?? '').trim() === '' && x.tipo !== 'semrenda') p.push(`informar o valor mensal bruto ${de} recebid${/^da /.test(de) ? 'a' : 'o'} por ${nome(x.m)}`);
-        if (!x.doc){ const docs = CAT_DOCS[tp.cat].filter(y => !/^Outro/.test(y)).map(y => y.toLowerCase()); p.push(`apresentar ${docs.length ? docs.join(', ') + ' ou outro documento idôneo' : 'documento idôneo'} referente ${aoA(de)} de ${nome(x.m)}`); }
+        const semValor = String(x.valor ?? '').trim() === '' && x.tipo !== 'semrenda';
+        if (!x.doc){ const k = x.tipo + '|' + (semValor ? 1 : 0); if (!grupos[k]){ grupos[k] = []; ordem.push(k); } juntar(grupos, k, nome(x.m)); }
+        else if (semValor) juntar(soValor, x.tipo, nome(x.m));
       });
+      const p = [];
+      const comp = ordem.map(k => { const [tipo, sv] = k.split('|'); return `${TIPO_DE[tipo] || 'do rendimento'} de ${dJuntar(grupos[k])}${sv === '1' ? ', com o valor mensal bruto' : ''}`; });
+      if (rd.semLinha.length) comp.push(`de renda de ${dJuntar(rd.semLinha.map(n => n.trim()))}, ou declaração de ausência de renda, se for o caso`);
+      if (comp.length) p.push('apresentar comprovação ' + comp.join('; '));
+      Object.keys(soValor).forEach(tipo => p.push(`informar o valor mensal bruto ${TIPO_DE[tipo] || 'do rendimento'} de ${dJuntar(soValor[tipo])}`));
+      if (p.length) add('À composição da renda do núcleo familiar', 'faz-se necessário ' + p.join('; ') + ' – Decreto, art. 21, IV');
     }
-    if (p.length) add('À composição da renda do núcleo familiar', (s.rend.length ? 'faz-se necessário: ' : '') + p.join('; ') + ' – Decreto, art. 21, IV');
   }
   if ((s.destino_obj || '').trim() && !encOrgao()) add(s.destino_obj.trim(), '');
   return out;
