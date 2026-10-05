@@ -1,4 +1,4 @@
-# Assistente de Parecer – Isenção de IPTU
+# Assistente de Despacho – Isenção de IPTU
 
 Ferramenta de apoio para análise de pedidos de isenção de IPTU de pessoa
 física (art. 113 da LC 203/2022, regulamentado pelo Decreto nº 1.410/2026).
@@ -10,13 +10,13 @@ O primeiro item do formulário é a triagem: o pedido só é analisado se o
 proprietário for aposentado ou pensionista, ou se o imóvel for moradia de
 pessoa com necessidades especiais permanentes (Decreto art. 4º, IV). Se
 nenhuma dessas hipóteses se aplica, o assistente indica indeferimento
-automático, esconde o restante do formulário e gera um parecer simplificado —
+automático, esconde o restante do formulário e gera um despacho simplificado —
 basta preencher a identificação do processo.
 
-## Modelo próprio de parecer
+## Modelo próprio de despacho
 
-Por padrão o parecer é gerado no formato automático do Assistente. No card
-**Modelo do parecer** é possível escolher **Meu modelo** e cadastrar um texto
+Por padrão o despacho é gerado no formato automático do Assistente. No card
+**Modelo do despacho** é possível escolher **Meu modelo** e cadastrar um texto
 próprio para cada resultado (deferimento, indeferimento, encaminhamento por
 pendência e indeferimento na triagem) — digitando ou carregando um arquivo
 `.docx` ou `.txt`. O modelo usa campos como `{{requerente}}`, `{{inscricao}}`,
@@ -24,6 +24,16 @@ pendência e indeferimento na triagem) — digitando ou carregando um arquivo
 blocos do texto automático, como `{{bloco:fatos}}`. Resultado sem modelo
 cadastrado continua saindo no formato automático. Os modelos ficam só no
 navegador; o botão **Baixar modelos** gera uma cópia em `.json`.
+
+## Numeração do despacho
+
+Cada despacho recebe um número automático por ano (ex.: `DESPACHO Nº 12/2026`),
+com sigla opcional do setor. O mesmo processo mantém o número enquanto o
+resultado não muda; um novo resultado (por exemplo, arquivamento depois de
+uma notificação) recebe novo número. A sequência é guardada no navegador e
+acompanha os despachos já registrados na pasta de processos; no card
+**Numeração do despacho** é possível ajustar o próximo número ou fixar à mão o
+número de um despacho. O número também vai para o relatório `.csv`.
 
 ## Como funciona
 
@@ -46,13 +56,13 @@ roda inteiramente no navegador de quem usa.
 Em ambos os casos o comportamento é idêntico — o que muda é só de onde a
 página é carregada.
 
-## Os pareceres e relatórios ficam só no seu computador
+## Os despachos e relatórios ficam só no seu computador
 
 Isso vale sempre, mesmo acessando pelo link do GitHub Pages:
 
 - O GitHub (e o GitHub Pages) apenas entrega o arquivo `index.html` para o
   navegador. Ele **não recebe, não processa e não armazena** nenhum dado
-  digitado, nenhum parecer gerado e nenhum relatório — a página não faz
+  digitado, nenhum despacho gerado e nenhum relatório — a página não faz
   nenhuma requisição de rede para salvar nada.
 - Cada processo aberto fica guardado, enquanto você trabalha, no
   `localStorage` do próprio navegador (um registro local, por navegador).
@@ -68,7 +78,7 @@ Isso vale sempre, mesmo acessando pelo link do GitHub Pages:
   a ferramenta cai automaticamente para o modo de baixar arquivo por arquivo.
 
 Ou seja: não importa se você abre a ferramenta pelo link do GitHub Pages ou
-por um arquivo local — os pareceres e relatórios nunca saem do seu
+por um arquivo local — os despachos e relatórios nunca saem do seu
 computador nem são enviados para o GitHub.
 
 ## Evitar commit acidental de arquivos exportados
@@ -76,7 +86,7 @@ computador nem são enviados para o GitHub.
 Se você rodar a ferramenta a partir de uma cópia local desta pasta e apontar
 a "pasta de processos" para dentro do repositório clonado, o `.gitignore`
 já ignora os nomes de arquivo que a ferramenta costuma gerar
-(`Relatorio_Isencoes_IPTU.csv`, `Parecer_IPTU_*.docx`, `processos/`).
+(`Relatorio_Isencoes_IPTU.csv`, `Despacho_IPTU_*.docx`, `processos/`).
 Ainda assim, o recomendado é sempre escolher uma pasta fora do repositório
 para guardar os processos.
 
