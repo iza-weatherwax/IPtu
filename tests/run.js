@@ -225,6 +225,17 @@ const X = '<img src=x onerror=alert("XSS")>';
   ok((doc2.match(/<w:p><w:pPr><w:spacing w:before="0" w:after="0" w:line="240" w:lineRule="auto"\/><w:jc w:val="left"\/><\/w:pPr><\/w:p>/g) || []).length === (doc2.match(/<\/w:tbl>/g) || []).length, 'Word: espaçamento sem parágrafos vazios (só o que separa tabelas)');
   await p.context().close();
 
+  sec('Relatório (.csv)');
+  p = await abrir(); await dados(p, {endereco:'Rua das Flores, 120; fundos'}); await p.check('[data-k="c_nenhuma"]'); await p.click('#btnGerar');
+  const [dlCsv] = await Promise.all([p.waitForEvent('download'), p.click('#btnExp')]);
+  const csv = require('fs').readFileSync(await dlCsv.path(), 'utf8').replace(/^﻿/, '').split('\r\n');
+  ok(/;CCI;Endereço do imóvel;Fiscal;/.test(csv[0]), 'relatório: coluna do endereço do imóvel depois do CCI');
+  ok(csv[1].split(';"Rua das Flores, 120; fundos";').length === 2, 'relatório: endereço digitado no item 2, protegido mesmo com ponto e vírgula', csv[1]);
+  await p.evaluate(() => { reg = []; regSave(); });
+  await p.setInputFiles('#fileImp', {name:'rel.csv', mimeType:'text/csv', buffer: Buffer.from(csv.join('\r\n'))}); await p.waitForTimeout(200);
+  ok(await p.evaluate(() => reg.length === 1 && reg[0].endereco === 'Rua das Flores, 120; fundos'), 'relatório importado mantém o endereço');
+  await p.context().close();
+
   sec('Ano e modelos próprios');
   p = await abrir();
   ok(await p.inputValue('[data-k="exercicio"]') === String(new Date().getFullYear()), 'exercício padrão é o ano corrente');

@@ -68,7 +68,8 @@ resultado não muda; um novo resultado (por exemplo, arquivamento depois de
 uma notificação) recebe novo número. A sequência é guardada no navegador e
 acompanha os despachos já registrados na pasta de processos; no card
 **Numeração do despacho** é possível ajustar o próximo número ou fixar à mão o
-número de um despacho. O número também vai para o relatório `.csv`.
+número de um despacho. O número também vai para o relatório `.csv`, que traz
+também o endereço do imóvel digitado no item 2 (coluna logo depois do CCI).
 
 ## Como funciona
 

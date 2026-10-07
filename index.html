@@ -1339,7 +1339,7 @@ function baixarDocx(){
 /* ============ relatório incremental ============ */
 const REG_KEY = 'iptuRegistro';
 const COND_COL = 'Condição art. 113 (obrigatória: aposentado, pensionista ou PNE - nenhuma = indeferimento)';
-const COLS = ['Data/hora','Nº do processo','Requerente','Inscrição imobiliária','CCI','Fiscal','Resultado',COND_COL,'Tipo de pedido','Nº do despacho'];
+const COLS = ['Data/hora','Nº do processo','Requerente','Inscrição imobiliária','CCI','Endereço do imóvel','Fiscal','Resultado',COND_COL,'Tipo de pedido','Nº do despacho'];
 function condArt113(){
   if (s.c_nenhuma) return 'NENHUMA – indeferimento (Decreto art. 4º, IV e §1º)';
   const x = []; if (s.c_apos) x.push('Aposentado'); if (s.c_pens) x.push('Pensionista'); if (s.c_pne) x.push('Morador com necessidades especiais permanentes');
@@ -1361,7 +1361,7 @@ function registrarProcesso(dec){
   parecerGerado = true;
   const n = (s.numero || '').trim();
   if (!n){ regMsg('Despacho gerado, mas NÃO salvo nem registrado: informe o nº do processo (item 2) e gere novamente.', true); return; }
-  curRec = {ts:new Date().toISOString(), numero:n, desp:s.desp ? despTxt(s.desp) : '', despN:s.desp ? s.desp.n : '', despAno:s.desp ? s.desp.ano : '', requerente:s.requerente||'', inscricao:s.inscricao||'', cci:s.cci||'', fiscal:s.fiscal||'', cond:condArt113(), resultado:dec === 'pend' ? (encOrgao() ? 'Encaminhado para verificação' + ((s.destino || '').trim() ? ' – ' + s.destino.trim() : '') : 'Pendência – contribuinte notificado por carta') : RES_L[dec], tipo:s.tipo==='renov' ? 'Renovação' : 'Primeira vez'};
+  curRec = {ts:new Date().toISOString(), numero:n, desp:s.desp ? despTxt(s.desp) : '', despN:s.desp ? s.desp.n : '', despAno:s.desp ? s.desp.ano : '', requerente:s.requerente||'', inscricao:s.inscricao||'', cci:s.cci||'', endereco:s.endereco||'', fiscal:s.fiscal||'', cond:condArt113(), resultado:dec === 'pend' ? (encOrgao() ? 'Encaminhado para verificação' + ((s.destino || '').trim() ? ' – ' + s.destino.trim() : '') : 'Pendência – contribuinte notificado por carta') : RES_L[dec], tipo:s.tipo==='renov' ? 'Renovação' : 'Primeira vez'};
   if (dirH){ salvarProcesso({registro:true}); return; }
   const i = reg.findIndex(r => regKey(r.numero) === regKey(n));
   if (i >= 0) reg[i] = curRec; else reg.push(curRec);
@@ -1371,7 +1371,7 @@ function registrarProcesso(dec){
 const tx = v => v ? '"=""' + String(v).replace(/"/g,'""""') + '"""' : '';
 function cel(v){ v = String(v ?? ''); if (/^[=+\-@\t\r]/.test(v)) v = "'" + v; return /[;"\n\r]/.test(v) ? '"' + v.replace(/"/g,'""') + '"' : v; }
 function toCsv(){
-  const rows = reg.slice().sort((a,b) => a.ts < b.ts ? -1 : 1).map(r => [cel(fmtTs(r.ts)), tx(r.numero), cel(r.requerente), tx(r.inscricao), tx(r.cci), cel(r.fiscal), cel(r.resultado), cel(r.cond), cel(r.tipo), tx(r.desp)].join(';'));
+  const rows = reg.slice().sort((a,b) => a.ts < b.ts ? -1 : 1).map(r => [cel(fmtTs(r.ts)), tx(r.numero), cel(r.requerente), tx(r.inscricao), tx(r.cci), cel(r.endereco), cel(r.fiscal), cel(r.resultado), cel(r.cond), cel(r.tipo), tx(r.desp)].join(';'));
   return [COLS.join(';'), ...rows].join('\r\n') + '\r\n';
 }
 function parseCsv(t){
@@ -1393,7 +1393,7 @@ function mergeCsv(text){
     const m = ix || {'Data/hora':0,'Nº do processo':1,'Requerente':2,'Inscrição imobiliária':3,'Fiscal':4,'Resultado':5,'Tipo de pedido':6};
     const g = c => (m[c] !== undefined && r[m[c]] !== undefined) ? unwrap(r[m[c]]) : '';
     if (r.length < 6) return;
-    const rec = {ts:parseTs(r[m['Data/hora']] || ''), numero:g('Nº do processo'), requerente:g('Requerente'), inscricao:g('Inscrição imobiliária'), cci:g('CCI'), fiscal:g('Fiscal'), resultado:g('Resultado'), cond:g(COND_COL), tipo:g('Tipo de pedido'), desp:g('Nº do despacho')};
+    const rec = {ts:parseTs(r[m['Data/hora']] || ''), numero:g('Nº do processo'), requerente:g('Requerente'), inscricao:g('Inscrição imobiliária'), cci:g('CCI'), endereco:g('Endereço do imóvel'), fiscal:g('Fiscal'), resultado:g('Resultado'), cond:g(COND_COL), tipo:g('Tipo de pedido'), desp:g('Nº do despacho')};
     if (!rec.numero) return;
     const k = reg.findIndex(x => regKey(x.numero) === regKey(rec.numero));
     if (k < 0){ reg.push(rec); add++; } else if (rec.ts > reg[k].ts){ reg[k] = rec; upd++; } });
@@ -1440,7 +1440,7 @@ async function dirPerm(ask){
   try { let p = await dirH.queryPermission({mode:'readwrite'}); if (p !== 'granted' && ask) p = await dirH.requestPermission({mode:'readwrite'}); return p === 'granted'; } catch(e){ return false; }
 }
 function rebuildReg(){ reg = procs.filter(p => p.registro).map(p => p.registro); regSave(); }
-function resumoProc(file, j){ const e = j.estado || {}; return {file, numero:e.numero||'', requerente:e.requerente||'', inscricao:e.inscricao||'', cci:e.cci||'', fiscal:e.fiscal||'', salvoEm:j.salvoEm||'', registro:j.registro||null}; }
+function resumoProc(file, j){ const e = j.estado || {}; return {file, numero:e.numero||'', requerente:e.requerente||'', inscricao:e.inscricao||'', cci:e.cci||'', fiscal:e.fiscal||'', salvoEm:j.salvoEm||'', registro:j.registro ? {...j.registro, endereco:j.registro.endereco ?? (e.endereco || '')} : null}; }
 async function recarregarPasta(){
   if (!(await dirPerm(true))){ regMsg('Sem permissão para ler a pasta. Clique em “Trocar pasta” ou “Atualizar lista” e autorize.', true); return false; }
   const novos = []; let ilegiveis = 0;
