@@ -236,6 +236,29 @@ const X = '<img src=x onerror=alert("XSS")>';
   ok(await p.evaluate(() => reg.length === 1 && reg[0].endereco === 'Rua das Flores, 120; fundos'), 'relatório importado mantém o endereço');
   await p.context().close();
 
+  /* pasta com processos (.json) já concluídos e relatório antigo, sem o endereço: uma pasta simulada em memória */
+  p = await abrir();
+  const pasta = await p.evaluate(async () => {
+    const arq = {};
+    const fh = nome => ({kind:'file', name:nome, getFile: async () => new File([arq[nome]], nome), createWritable: async () => { let buf = ''; return {write: async t => { buf += t; }, close: async () => { arq[nome] = buf; }}; }});
+    const proc = (n, end, desp) => JSON.stringify({tipo:'processo-iptu', versao:1, salvoEm:'2026-09-0' + n + 'T10:00:00.000Z', estado:{numero:n, requerente:'R' + n, endereco:end, moradores:[], rend:[]}, registro:desp ? {ts:'2026-09-0' + n + 'T10:00:00.000Z', numero:n, requerente:'R' + n, inscricao:'', cci:'', fiscal:'F', cond:'Aposentado', resultado:'Deferido', tipo:'Primeira vez', desp:n + '/2026'} : null});
+    arq['1.json'] = proc('1', 'Rua A, 10', true); arq['2.json'] = proc('2', 'Av. B; 20', true); arq['3.json'] = proc('3', 'Rua C', false);
+    arq['Relatorio_Isencoes_IPTU.csv'] = '﻿Data/hora;Nº do processo;Requerente\r\nlinha antiga\r\n';
+    dirH = {name:'processos', queryPermission: async () => 'granted', requestPermission: async () => 'granted',
+      entries: async function*(){ for (const n of Object.keys(arq)) yield [n, fh(n)]; },
+      getFileHandle: async (n, o) => { if (!(n in arq)){ if (!(o && o.create)) throw new DOMException('não existe', 'NotFoundError'); arq[n] = ''; } return fh(n); }};
+    await recarregarPasta();
+    const csv = arq['Relatorio_Isencoes_IPTU.csv'], msg = document.getElementById('regMsg').textContent;
+    arq['Relatorio_Isencoes_IPTU.csv'] += 'marca';
+    await recarregarPasta();
+    return {csv, msg, copia: arq['Relatorio_Isencoes_IPTU_sem_endereco.csv'] || '', mantido: arq['Relatorio_Isencoes_IPTU.csv'].endsWith('marca')};
+  });
+  ok(/;Endereço do imóvel;/.test(pasta.csv) && /;Rua A, 10;/.test(pasta.csv) && /;"Av\. B; 20";/.test(pasta.csv) && !/Rua C/.test(pasta.csv), 'ao abrir a pasta, relatório antigo é refeito com o endereço de cada processo concluído');
+  ok(/linha antiga/.test(pasta.copia), 'versão anterior do relatório fica guardada');
+  ok(/Relatório atualizado com o endereço do imóvel: 2 de 2/.test(pasta.msg), 'aviso da atualização do relatório', pasta.msg);
+  ok(pasta.mantido, 'relatório já com o endereço não é reescrito ao abrir a pasta de novo');
+  await p.context().close();
+
   sec('Ano e modelos próprios');
   p = await abrir();
   ok(await p.inputValue('[data-k="exercicio"]') === String(new Date().getFullYear()), 'exercício padrão é o ano corrente');

@@ -1449,8 +1449,30 @@ async function recarregarPasta(){
     try { const j = JSON.parse(await (await fh.getFile()).text()); if (j && j.tipo === 'processo-iptu' && j.estado) novos.push(resumoProc(name, j)); } catch(e){ ilegiveis++; }
   }
   procs = novos; rebuildReg(); renderReg(); vincStatus();
-  if (ilegiveis) regMsg(`${ilegiveis} arquivo(s) .json da pasta não puderam ser lidos e foram ignorados.`, true);
+  await atualizarRelatorioAntigo();
+  const avisos = [ilegiveis ? `${ilegiveis} arquivo(s) .json da pasta não puderam ser lidos e foram ignorados.` : '', relAviso ? relAviso.t : ''].filter(Boolean);
+  if (avisos.length) regMsg(avisos.join(' '), !!ilegiveis || !!(relAviso && relAviso.erro));
   return true;
+}
+/* relatório gravado antes da coluna do endereço: refeito uma vez, ao abrir a pasta, a partir dos processos (.json) da pasta; a versão anterior fica guardada */
+const REL_NOME = 'Relatorio_Isencoes_IPTU.csv', REL_ANTIGO = 'Relatorio_Isencoes_IPTU_sem_endereco.csv';
+let relAviso = null; /* {t, erro}: resultado da última atualização automática, para as mensagens da pasta */
+async function atualizarRelatorioAntigo(){
+  relAviso = null;
+  if (!reg.length) return;
+  let antigo = null;
+  try { antigo = await (await (await dirH.getFileHandle(REL_NOME)).getFile()).text(); }
+  catch(e){ if (e.name !== 'NotFoundError'){ relAviso = {t:`Não foi possível ler o relatório (${REL_NOME}) para atualizá-lo com o endereço dos imóveis (está aberto no Excel?). Feche-o e clique em “Atualizar lista”.`, erro:true}; return; } } /* NotFoundError: o relatório ainda não existe */
+  if (antigo !== null && antigo.replace(/^\uFEFF/, '').split(/\r?\n/)[0].split(';').includes('Endereço do imóvel')) return; /* já está no formato atual */
+  const guardar = antigo !== null && !!antigo.trim();
+  if (guardar){
+    try { const fh = await dirH.getFileHandle(REL_ANTIGO, {create:true}); const w = await fh.createWritable(); await w.write('\ufeff' + antigo.replace(/^\uFEFF/, '')); await w.close(); }
+    catch(e){ relAviso = {t:`Não foi possível guardar uma cópia do relatório atual (${REL_NOME}), por isso ele não foi atualizado com o endereço dos imóveis. Clique em “Atualizar lista” para tentar de novo.`, erro:true}; return; }
+  }
+  const n = reg.filter(r => String(r.endereco || '').trim()).length;
+  relAviso = await escreverRelatorio()
+    ? {t:`Relatório atualizado com o endereço do imóvel: ${n} de ${reg.length} processo(s) com endereço preenchido.` + (guardar ? ` A versão anterior foi guardada como ${REL_ANTIGO}.` : '')}
+    : {t:`Não foi possível atualizar o relatório com o endereço dos imóveis (o arquivo ${REL_NOME} está aberto no Excel?). Feche-o e clique em “Atualizar lista”.`, erro:true};
 }
 function pastaModal(mostrar, nome){
   $('pastaModal').style.display = mostrar ? 'flex' : 'none';
@@ -1464,11 +1486,11 @@ async function escolherPasta(){
   try {
     const h = await showDirectoryPicker({mode:'readwrite', id:'iptu-processos', startIn:'documents'});
     dirH = h; try { await idbPut('dir', h); } catch(e){}
-    if (await recarregarPasta()){ pastaModal(false); regMsg(`Pasta “${h.name}” vinculada: ${procs.length} processo(s) encontrado(s).`); }
+    if (await recarregarPasta()){ pastaModal(false); regMsg(`Pasta “${h.name}” vinculada: ${procs.length} processo(s) encontrado(s).` + (relAviso ? ' ' + relAviso.t : ''), !!(relAviso && relAviso.erro)); }
   } catch(e){ if (e.name !== 'AbortError') alert('Não foi possível vincular a pasta.'); }
 }
 async function escreverRelatorio(){
-  try { const fh = await dirH.getFileHandle('Relatorio_Isencoes_IPTU.csv', {create:true}); const w = await fh.createWritable(); await w.write('\ufeff' + toCsv()); await w.close(); return true; } catch(e){ return false; }
+  try { const fh = await dirH.getFileHandle(REL_NOME, {create:true}); const w = await fh.createWritable(); await w.write('\ufeff' + toCsv()); await w.close(); return true; } catch(e){ return false; }
 }
 async function salvarProcesso(o = {}){
   const n = (s.numero || '').trim();
@@ -1666,7 +1688,7 @@ document.addEventListener('click', e => { const n = e.target.dataset && e.target
 despSync(); build(); ligarRotulos(); cfgLoad(); applyState(); renderReg(); vincStatus(); saveInd();
 $('pmEscolher').onclick = escolherPasta;
 $('pmSem').onclick = () => pastaModal(false);
-$('pmReconectar').onclick = async () => { if (await recarregarPasta()){ pastaModal(false); regMsg(`Pasta “${dirH.name}” reconectada: ${procs.length} processo(s).`); } };
+$('pmReconectar').onclick = async () => { if (await recarregarPasta()){ pastaModal(false); regMsg(`Pasta “${dirH.name}” reconectada: ${procs.length} processo(s).` + (relAviso ? ' ' + relAviso.t : ''), !!(relAviso && relAviso.erro)); } };
 idbGet('dir').then(async h => { if (!h){ if (window.showDirectoryPicker) pastaModal(true, null); return; } dirH = h; vincStatus(); if (await dirPerm(false)){ await recarregarPasta(); pastaModal(false); } else { pastaModal(true, h.name); $('btnPasta').textContent = 'Reconectar pasta'; $('btnAtualizar').style.display = ''; $('vincStatus').textContent = `Pasta ${h.name} vinculada. Clique em “Atualizar lista” para reconectar (o navegador pede autorização).`; renderReg(); } }).catch(() => { if (window.showDirectoryPicker) pastaModal(true, null); });
 </script>
 </body>

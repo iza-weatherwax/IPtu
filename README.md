@@ -69,7 +69,11 @@ uma notificação) recebe novo número. A sequência é guardada no navegador e
 acompanha os despachos já registrados na pasta de processos; no card
 **Numeração do despacho** é possível ajustar o próximo número ou fixar à mão o
 número de um despacho. O número também vai para o relatório `.csv`, que traz
-também o endereço do imóvel digitado no item 2 (coluna logo depois do CCI).
+também o endereço do imóvel digitado no item 2 (coluna logo depois do CCI). Se a pasta de
+processos ainda tem um relatório antigo, sem essa coluna, ele é refeito
+automaticamente na primeira vez que a pasta é aberta, com o endereço de cada
+processo (.json) da pasta; a versão anterior fica guardada como
+`Relatorio_Isencoes_IPTU_sem_endereco.csv`.
 
 ## Como funciona
 
@@ -122,7 +126,7 @@ computador nem são enviados para o GitHub.
 Se você rodar a ferramenta a partir de uma cópia local desta pasta e apontar
 a "pasta de processos" para dentro do repositório clonado, o `.gitignore`
 já ignora os nomes de arquivo que a ferramenta costuma gerar
-(`Relatorio_Isencoes_IPTU.csv`, `Despacho_IPTU_*.docx`, `processos/`).
+(`Relatorio_Isencoes_IPTU*.csv`, `Despacho_IPTU_*.docx`, `processos/`).
 Ainda assim, o recomendado é sempre escolher uma pasta fora do repositório
 para guardar os processos.
 
