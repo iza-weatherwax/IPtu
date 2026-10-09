@@ -231,19 +231,19 @@ const X = '<img src=x onerror=alert("XSS")>';
   const csv = require('fs').readFileSync(await dlCsv.path(), 'utf8').replace(/^﻿/, '').split('\r\n');
   ok(/;CCI;Endereço do imóvel;Fiscal;/.test(csv[0]), 'relatório: coluna do endereço do imóvel depois do CCI');
   ok(csv[1].split(';"Rua das Flores, 120; fundos";').length === 2, 'relatório: endereço digitado no item 2, protegido mesmo com ponto e vírgula', csv[1]);
+  ok(new RegExp(';Nº 1/' + new Date().getFullYear() + '$').test(csv[1]), 'relatório: nº do despacho como texto (“Nº 1/ano”), que a planilha não converte em data', csv[1]);
   await p.evaluate(() => { reg = []; regSave(); });
   await p.setInputFiles('#fileImp', {name:'rel.csv', mimeType:'text/csv', buffer: Buffer.from(csv.join('\r\n'))}); await p.waitForTimeout(200);
-  ok(await p.evaluate(() => reg.length === 1 && reg[0].endereco === 'Rua das Flores, 120; fundos'), 'relatório importado mantém o endereço');
+  ok(await p.evaluate(() => reg.length === 1 && reg[0].endereco === 'Rua das Flores, 120; fundos' && reg[0].desp === '1/' + new Date().getFullYear()), 'relatório importado mantém o endereço e o nº do despacho');
   await p.context().close();
 
-  /* pasta com processos (.json) já concluídos e relatório antigo, sem o endereço: uma pasta simulada em memória */
-  p = await abrir();
-  const pasta = await p.evaluate(async () => {
+  /* pasta com processos (.json) já concluídos e relatórios em formatos antigos: uma pasta simulada em memória */
+  const pastaSimulada = (p, relatorio) => p.evaluate(async rel => {
     const arq = {};
     const fh = nome => ({kind:'file', name:nome, getFile: async () => new File([arq[nome]], nome), createWritable: async () => { let buf = ''; return {write: async t => { buf += t; }, close: async () => { arq[nome] = buf; }}; }});
-    const proc = (n, end, desp) => JSON.stringify({tipo:'processo-iptu', versao:1, salvoEm:'2026-09-0' + n + 'T10:00:00.000Z', estado:{numero:n, requerente:'R' + n, endereco:end, moradores:[], rend:[]}, registro:desp ? {ts:'2026-09-0' + n + 'T10:00:00.000Z', numero:n, requerente:'R' + n, inscricao:'', cci:'', fiscal:'F', cond:'Aposentado', resultado:'Deferido', tipo:'Primeira vez', desp:n + '/2026'} : null});
-    arq['1.json'] = proc('1', 'Rua A, 10', true); arq['2.json'] = proc('2', 'Av. B; 20', true); arq['3.json'] = proc('3', 'Rua C', false);
-    arq['Relatorio_Isencoes_IPTU.csv'] = '﻿Data/hora;Nº do processo;Requerente\r\nlinha antiga\r\n';
+    const proc = (n, end, desp) => JSON.stringify({tipo:'processo-iptu', versao:1, salvoEm:'2026-09-0' + n + 'T10:00:00.000Z', estado:{numero:n, requerente:'R' + n, endereco:end, moradores:[], rend:[]}, registro:desp ? {ts:'2026-09-0' + n + 'T10:00:00.000Z', numero:n, requerente:'R' + n, inscricao:'', cci:'', fiscal:'F', cond:'Aposentado', resultado:'Deferido', tipo:'Primeira vez', desp} : null});
+    arq['1.json'] = proc('1', 'Rua A, 10', '12/2026'); arq['2.json'] = proc('2', 'Av. B; 20', '461-03/2026'); arq['3.json'] = proc('3', 'Rua C', '');
+    arq['Relatorio_Isencoes_IPTU.csv'] = rel;
     dirH = {name:'processos', queryPermission: async () => 'granted', requestPermission: async () => 'granted',
       entries: async function*(){ for (const n of Object.keys(arq)) yield [n, fh(n)]; },
       getFileHandle: async (n, o) => { if (!(n in arq)){ if (!(o && o.create)) throw new DOMException('não existe', 'NotFoundError'); arq[n] = ''; } return fh(n); }};
@@ -251,13 +251,22 @@ const X = '<img src=x onerror=alert("XSS")>';
     const csv = arq['Relatorio_Isencoes_IPTU.csv'], msg = document.getElementById('regMsg').textContent;
     arq['Relatorio_Isencoes_IPTU.csv'] += 'marca';
     await recarregarPasta();
-    return {csv, msg, copia: arq['Relatorio_Isencoes_IPTU_sem_endereco.csv'] || '', mantido: arq['Relatorio_Isencoes_IPTU.csv'].endsWith('marca')};
-  });
-  ok(/;Endereço do imóvel;/.test(pasta.csv) && /;Rua A, 10;/.test(pasta.csv) && /;"Av\. B; 20";/.test(pasta.csv) && !/Rua C/.test(pasta.csv), 'ao abrir a pasta, relatório antigo é refeito com o endereço de cada processo concluído');
-  ok(/linha antiga/.test(pasta.copia), 'versão anterior do relatório fica guardada');
-  ok(/Relatório atualizado com o endereço do imóvel: 2 de 2/.test(pasta.msg), 'aviso da atualização do relatório', pasta.msg);
-  ok(pasta.mantido, 'relatório já com o endereço não é reescrito ao abrir a pasta de novo');
-  await p.context().close();
+    return {csv, msg, copias: Object.keys(arq).filter(k => /^Relatorio_Isencoes_IPTU_anterior_\d{4}-\d{2}-\d{2}_\d{4}\.csv$/.test(k)).map(k => arq[k]), mantido: arq['Relatorio_Isencoes_IPTU.csv'].endsWith('marca')};
+  }, relatorio);
+  const CAB = 'Data/hora;Nº do processo;Requerente;Inscrição imobiliária;CCI;Endereço do imóvel;Fiscal;Resultado;Condição;Tipo de pedido;Nº do despacho\r\n';
+  const ANTIGOS = [
+    ['sem a coluna do endereço', 'Data/hora;Nº do processo;Requerente\r\nlinha antiga\r\n'],
+    ['com o nº do despacho como fórmula', CAB + '01/09/2026 10:00;"=""1""";R1;;;Rua A, 10;F;Deferido;Aposentado;Primeira vez;"=""12/2026"""\r\n'],
+    ['com o nº do despacho já convertido em data pelo Excel', CAB + '01/09/2026 10:00;1;R1;;;Rua A, 10;F;Deferido;Aposentado;Primeira vez;dez/26\r\n']
+  ];
+  for (const [nome, rel] of ANTIGOS){
+    p = await abrir(); const r = await pastaSimulada(p, '﻿' + rel);
+    ok(/;Endereço do imóvel;/.test(r.csv) && /;Rua A, 10;.*;Nº 12\/2026\r\n/.test(r.csv) && /;"Av\. B; 20";.*;Nº 461-03\/2026\r\n/.test(r.csv) && !/Rua C/.test(r.csv), 'pasta com relatório ' + nome + ': refeito com o endereço e o nº do despacho como texto');
+    ok(r.copias.length === 1 && r.copias[0] === '﻿' + rel, 'versão anterior guardada sem alteração (relatório ' + nome + ')');
+    ok(/Relatório atualizado a partir dos processos da pasta: 2 processo\(s\), 2 com endereço/.test(r.msg), 'aviso da atualização (relatório ' + nome + ')', r.msg);
+    ok(r.mantido, 'relatório já no formato atual não é reescrito ao abrir a pasta de novo (relatório ' + nome + ')');
+    await p.context().close();
+  }
 
   sec('Ano e modelos próprios');
   p = await abrir();

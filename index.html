@@ -1369,9 +1369,11 @@ function registrarProcesso(dec){
   regMsg(ok ? `Processo ${n} registrado só neste navegador (${curRec.resultado}). Escolha uma pasta de processos para guardar os arquivos.` : 'ATENÇÃO: o navegador não permitiu salvar o registro. Escolha uma pasta ou exporte o relatório agora.', !ok);
 }
 const tx = v => v ? '"=""' + String(v).replace(/"/g,'""""') + '"""' : '';
+/* nº do despacho no relatório: "Nº 12/2026" é texto em qualquer planilha; "12/2026" (ou a fórmula ="12/2026", depois que o Excel salva o arquivo) vira data */
+const despCsv = d => { d = String(d || '').trim(); return d && !/^N[º°]/.test(d) ? 'Nº ' + d : d; };
 function cel(v){ v = String(v ?? ''); if (/^[=+\-@\t\r]/.test(v)) v = "'" + v; return /[;"\n\r]/.test(v) ? '"' + v.replace(/"/g,'""') + '"' : v; }
 function toCsv(){
-  const rows = reg.slice().sort((a,b) => a.ts < b.ts ? -1 : 1).map(r => [cel(fmtTs(r.ts)), tx(r.numero), cel(r.requerente), tx(r.inscricao), tx(r.cci), cel(r.endereco), cel(r.fiscal), cel(r.resultado), cel(r.cond), cel(r.tipo), tx(r.desp)].join(';'));
+  const rows = reg.slice().sort((a,b) => a.ts < b.ts ? -1 : 1).map(r => [cel(fmtTs(r.ts)), tx(r.numero), cel(r.requerente), tx(r.inscricao), tx(r.cci), cel(r.endereco), cel(r.fiscal), cel(r.resultado), cel(r.cond), cel(r.tipo), cel(despCsv(r.desp))].join(';'));
   return [COLS.join(';'), ...rows].join('\r\n') + '\r\n';
 }
 function parseCsv(t){
@@ -1393,7 +1395,7 @@ function mergeCsv(text){
     const m = ix || {'Data/hora':0,'Nº do processo':1,'Requerente':2,'Inscrição imobiliária':3,'Fiscal':4,'Resultado':5,'Tipo de pedido':6};
     const g = c => (m[c] !== undefined && r[m[c]] !== undefined) ? unwrap(r[m[c]]) : '';
     if (r.length < 6) return;
-    const rec = {ts:parseTs(r[m['Data/hora']] || ''), numero:g('Nº do processo'), requerente:g('Requerente'), inscricao:g('Inscrição imobiliária'), cci:g('CCI'), endereco:g('Endereço do imóvel'), fiscal:g('Fiscal'), resultado:g('Resultado'), cond:g(COND_COL), tipo:g('Tipo de pedido'), desp:g('Nº do despacho')};
+    const rec = {ts:parseTs(r[m['Data/hora']] || ''), numero:g('Nº do processo'), requerente:g('Requerente'), inscricao:g('Inscrição imobiliária'), cci:g('CCI'), endereco:g('Endereço do imóvel'), fiscal:g('Fiscal'), resultado:g('Resultado'), cond:g(COND_COL), tipo:g('Tipo de pedido'), desp:g('Nº do despacho').replace(/^N[º°]\.?\s*/, '')};
     if (!rec.numero) return;
     const k = reg.findIndex(x => regKey(x.numero) === regKey(rec.numero));
     if (k < 0){ reg.push(rec); add++; } else if (rec.ts > reg[k].ts){ reg[k] = rec; upd++; } });
@@ -1454,25 +1456,32 @@ async function recarregarPasta(){
   if (avisos.length) regMsg(avisos.join(' '), !!ilegiveis || !!(relAviso && relAviso.erro));
   return true;
 }
-/* relatório gravado antes da coluna do endereço: refeito uma vez, ao abrir a pasta, a partir dos processos (.json) da pasta; a versão anterior fica guardada */
-const REL_NOME = 'Relatorio_Isencoes_IPTU.csv', REL_ANTIGO = 'Relatorio_Isencoes_IPTU_sem_endereco.csv';
+/* relatório da pasta em formato antigo (sem a coluna do endereço, ou com o nº do despacho como fórmula ou já convertido em data pelo Excel):
+   refeito ao abrir a pasta, a partir dos processos (.json); a versão anterior fica guardada numa cópia com data e hora */
+const REL_NOME = 'Relatorio_Isencoes_IPTU.csv';
 let relAviso = null; /* {t, erro}: resultado da última atualização automática, para as mensagens da pasta */
+function relatorioDesatualizado(texto){
+  const linhas = parseCsv(texto), cab = (linhas[0] || []).map(c => c.trim());
+  const iEnd = cab.indexOf('Endereço do imóvel'), iDesp = cab.indexOf('Nº do despacho');
+  if (iEnd < 0 || iDesp < 0) return true;
+  return linhas.slice(1).some(l => { const v = (l[iDesp] || '').trim(); return v && !/^N[º°]\s/.test(v); });
+}
 async function atualizarRelatorioAntigo(){
   relAviso = null;
   if (!reg.length) return;
   let antigo = null;
-  try { antigo = await (await (await dirH.getFileHandle(REL_NOME)).getFile()).text(); }
-  catch(e){ if (e.name !== 'NotFoundError'){ relAviso = {t:`Não foi possível ler o relatório (${REL_NOME}) para atualizá-lo com o endereço dos imóveis (está aberto no Excel?). Feche-o e clique em “Atualizar lista”.`, erro:true}; return; } } /* NotFoundError: o relatório ainda não existe */
-  if (antigo !== null && antigo.replace(/^\uFEFF/, '').split(/\r?\n/)[0].split(';').includes('Endereço do imóvel')) return; /* já está no formato atual */
-  const guardar = antigo !== null && !!antigo.trim();
-  if (guardar){
-    try { const fh = await dirH.getFileHandle(REL_ANTIGO, {create:true}); const w = await fh.createWritable(); await w.write('\ufeff' + antigo.replace(/^\uFEFF/, '')); await w.close(); }
-    catch(e){ relAviso = {t:`Não foi possível guardar uma cópia do relatório atual (${REL_NOME}), por isso ele não foi atualizado com o endereço dos imóveis. Clique em “Atualizar lista” para tentar de novo.`, erro:true}; return; }
+  try { antigo = (await (await (await dirH.getFileHandle(REL_NOME)).getFile()).text()).replace(/^\uFEFF/, ''); }
+  catch(e){ if (e.name !== 'NotFoundError'){ relAviso = {t:`Não foi possível ler o relatório (${REL_NOME}) para conferir o formato (está aberto no Excel?). Feche-o e clique em “Atualizar lista”.`, erro:true}; return; } } /* NotFoundError: o relatório ainda não existe */
+  if (antigo !== null && antigo.trim() && !relatorioDesatualizado(antigo)) return; /* já está no formato atual */
+  const d = new Date(), copia = antigo !== null && antigo.trim() ? `Relatorio_Isencoes_IPTU_anterior_${d.getFullYear()}-${p2(d.getMonth()+1)}-${p2(d.getDate())}_${p2(d.getHours())}${p2(d.getMinutes())}.csv` : '';
+  if (copia){
+    try { const fh = await dirH.getFileHandle(copia, {create:true}); const w = await fh.createWritable(); await w.write('\ufeff' + antigo); await w.close(); }
+    catch(e){ relAviso = {t:`Não foi possível guardar uma cópia do relatório atual (${REL_NOME}), por isso ele não foi atualizado. Clique em “Atualizar lista” para tentar de novo.`, erro:true}; return; }
   }
   const n = reg.filter(r => String(r.endereco || '').trim()).length;
   relAviso = await escreverRelatorio()
-    ? {t:`Relatório atualizado com o endereço do imóvel: ${n} de ${reg.length} processo(s) com endereço preenchido.` + (guardar ? ` A versão anterior foi guardada como ${REL_ANTIGO}.` : '')}
-    : {t:`Não foi possível atualizar o relatório com o endereço dos imóveis (o arquivo ${REL_NOME} está aberto no Excel?). Feche-o e clique em “Atualizar lista”.`, erro:true};
+    ? {t:`Relatório atualizado a partir dos processos da pasta: ${reg.length} processo(s), ${n} com endereço do imóvel; nº do despacho gravado como texto (ex.: Nº 12/2026), para o Excel não transformar em data.` + (copia ? ` A versão anterior foi guardada como ${copia}.` : '')}
+    : {t:`Não foi possível atualizar o relatório (o arquivo ${REL_NOME} está aberto no Excel?). Feche-o e clique em “Atualizar lista”.`, erro:true};
 }
 function pastaModal(mostrar, nome){
   $('pastaModal').style.display = mostrar ? 'flex' : 'none';

@@ -69,11 +69,13 @@ uma notificação) recebe novo número. A sequência é guardada no navegador e
 acompanha os despachos já registrados na pasta de processos; no card
 **Numeração do despacho** é possível ajustar o próximo número ou fixar à mão o
 número de um despacho. O número também vai para o relatório `.csv`, que traz
-também o endereço do imóvel digitado no item 2 (coluna logo depois do CCI). Se a pasta de
-processos ainda tem um relatório antigo, sem essa coluna, ele é refeito
-automaticamente na primeira vez que a pasta é aberta, com o endereço de cada
-processo (.json) da pasta; a versão anterior fica guardada como
-`Relatorio_Isencoes_IPTU_sem_endereco.csv`.
+também o endereço do imóvel digitado no item 2 (coluna logo depois do CCI). O nº do despacho sai como
+texto (ex.: `Nº 12/2026`), para que o Excel não o transforme em data, mesmo
+depois de o arquivo ser salvo no Excel. Se a pasta de processos tem um
+relatório em formato antigo (sem a coluna do endereço, ou com o nº do despacho
+como fórmula ou já convertido em data), ele é refeito automaticamente quando a
+pasta é aberta, a partir dos processos (.json) da pasta; a versão anterior fica
+guardada como `Relatorio_Isencoes_IPTU_anterior_<data>_<hora>.csv`.
 
 ## Como funciona
 
